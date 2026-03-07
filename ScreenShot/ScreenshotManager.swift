@@ -48,13 +48,13 @@ class ScreenshotManager {
         let filter = SCContentFilter(display: display, excludingWindows: [])
 
         // Configure the stream to capture only the requested region
-        var config = SCStreamConfiguration()
+        let config = SCStreamConfiguration()
         config.sourceRect = rect
         config.width = Int(rect.width)
         config.height = Int(rect.height)
 
         // Capture the screenshot
-        let screenshot = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-        return screenshot
+        let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        return NSImage(cgImage: cgImage, size: NSZeroSize)
     }
 }
