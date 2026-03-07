@@ -134,41 +134,50 @@ struct PreferencesView: View {
 
 struct KeyComboView: View {
     @Binding var key: String
-    @Binding var modifiers: NSEvent.ModifierFlags
-
-    var modifiersText: String {
-        var parts: [String] = []
-        if modifiers.contains(.command) { parts.append("⌘") }
-        if modifiers.contains(.shift) { parts.append("⇧") }
-        if modifiers.contains(.control) { parts.append("⌃") }
-        if modifiers.contains(.option) { parts.append("⌥") }
-        return parts.joined(separator: "")
-    }
+    @Binding var modifiers: UInt
 
     var body: some View {
-        VStack {
+        let modifierFlags = NSEvent.ModifierFlags(rawValue: modifiers)
+
+        return VStack {
             HStack(spacing: 4) {
                 Toggle("⌘", isOn: Binding(
-                    get: { modifiers.contains(.command) },
-                    set: { if $0 { modifiers.insert(.command) } else { modifiers.remove(.command) } }
+                    get: { modifierFlags.contains(.command) },
+                    set: {
+                        var flags = modifierFlags
+                        if $0 { flags.insert(.command) } else { flags.remove(.command) }
+                        modifiers = flags.rawValue
+                    }
                 ))
                 .frame(width: 30)
 
                 Toggle("⇧", isOn: Binding(
-                    get: { modifiers.contains(.shift) },
-                    set: { if $0 { modifiers.insert(.shift) } else { modifiers.remove(.shift) } }
+                    get: { modifierFlags.contains(.shift) },
+                    set: {
+                        var flags = modifierFlags
+                        if $0 { flags.insert(.shift) } else { flags.remove(.shift) }
+                        modifiers = flags.rawValue
+                    }
                 ))
                 .frame(width: 30)
 
                 Toggle("⌃", isOn: Binding(
-                    get: { modifiers.contains(.control) },
-                    set: { if $0 { modifiers.insert(.control) } else { modifiers.remove(.control) } }
+                    get: { modifierFlags.contains(.control) },
+                    set: {
+                        var flags = modifierFlags
+                        if $0 { flags.insert(.control) } else { flags.remove(.control) }
+                        modifiers = flags.rawValue
+                    }
                 ))
                 .frame(width: 30)
 
                 Toggle("⌥", isOn: Binding(
-                    get: { modifiers.contains(.option) },
-                    set: { if $0 { modifiers.insert(.option) } else { modifiers.remove(.option) } }
+                    get: { modifierFlags.contains(.option) },
+                    set: {
+                        var flags = modifierFlags
+                        if $0 { flags.insert(.option) } else { flags.remove(.option) }
+                        modifiers = flags.rawValue
+                    }
                 ))
                 .frame(width: 30)
 

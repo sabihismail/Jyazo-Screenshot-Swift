@@ -16,8 +16,8 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(imageShortcutKey, forKey: "imageShortcutKey") }
     }
 
-    var imageShortcutModifiers: NSEvent.ModifierFlags {
-        didSet { UserDefaults.standard.set(imageShortcutModifiers.rawValue, forKey: "imageShortcutModifiers") }
+    var imageShortcutModifiers: UInt {
+        didSet { UserDefaults.standard.set(imageShortcutModifiers, forKey: "imageShortcutModifiers") }
     }
 
     var enableGIFShortcut: Bool {
@@ -28,8 +28,8 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(gifShortcutKey, forKey: "gifShortcutKey") }
     }
 
-    var gifShortcutModifiers: NSEvent.ModifierFlags {
-        didSet { UserDefaults.standard.set(gifShortcutModifiers.rawValue, forKey: "gifShortcutModifiers") }
+    var gifShortcutModifiers: UInt {
+        didSet { UserDefaults.standard.set(gifShortcutModifiers, forKey: "gifShortcutModifiers") }
     }
 
     var saveAllImages: Bool {
@@ -54,10 +54,10 @@ final class AppSettings {
         self.serverURL = defaults.string(forKey: "serverURL") ?? ""
         self.enableImageShortcut = defaults.bool(forKey: "enableImageShortcut")
         self.imageShortcutKey = defaults.string(forKey: "imageShortcutKey") ?? "c"
-        self.imageShortcutModifiers = NSEvent.ModifierFlags(rawValue: UInt(defaults.integer(forKey: "imageShortcutModifiers")))
+        self.imageShortcutModifiers = UInt(defaults.integer(forKey: "imageShortcutModifiers"))
         self.enableGIFShortcut = defaults.bool(forKey: "enableGIFShortcut")
         self.gifShortcutKey = defaults.string(forKey: "gifShortcutKey") ?? "g"
-        self.gifShortcutModifiers = NSEvent.ModifierFlags(rawValue: UInt(defaults.integer(forKey: "gifShortcutModifiers")))
+        self.gifShortcutModifiers = UInt(defaults.integer(forKey: "gifShortcutModifiers"))
         self.saveAllImages = defaults.bool(forKey: "saveAllImages")
         self.saveDirectory = defaults.string(forKey: "saveDirectory") ?? Self.defaultSaveDirectory()
         self.enableSound = defaults.bool(forKey: "enableSound")
