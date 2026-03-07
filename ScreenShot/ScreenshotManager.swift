@@ -74,7 +74,7 @@ class ScreenshotManager {
                 return nil
             }
 
-            try pngData.write(toFile: filePath, options: .atomic)
+            try pngData.write(to: URL(fileURLWithPath: filePath), options: .atomic)
             print("[CAPTURE] Saved to: \(filePath)")
             return URL(fileURLWithPath: filePath)
         } catch {

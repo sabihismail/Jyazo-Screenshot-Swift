@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import AppKit
 
 @Observable
 final class AppSettings {

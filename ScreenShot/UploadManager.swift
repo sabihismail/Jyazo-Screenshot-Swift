@@ -12,7 +12,7 @@ struct ServerResponse: Decodable {
 }
 
 @MainActor
-final class UploadManager {
+final class UploadManager: NSObject {
     static let shared = UploadManager()
 
     private var authSession: ASWebAuthenticationSession?
