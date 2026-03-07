@@ -1,24 +1,21 @@
-//
-//  ContentView.swift
-//  ScreenShot
-//
-//  Created by zeeN on 2026-03-07.
-//
-
 import SwiftUI
+import AppKit
 
-struct ContentView: View {
+struct MenuView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Button("Capture Region") {
+            // Delay so the menu dismisses before the overlay appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                ScreenshotManager.shared.startCapture()
+            }
         }
-        .padding()
-    }
-}
+        .keyboardShortcut("4", modifiers: [.command, .shift])
 
-#Preview {
-    ContentView()
+        Divider()
+
+        Button("Quit") {
+            NSApplication.shared.terminate(nil)
+        }
+        .keyboardShortcut("q")
+    }
 }
