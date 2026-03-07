@@ -1,6 +1,7 @@
 import AppKit
 import ScreenCaptureKit
 import ImageIO
+import UniformTypeIdentifiers
 
 @MainActor
 class GifRecorder: NSObject {
@@ -36,7 +37,11 @@ class GifRecorder: NSObject {
         hideRecordingHUD()
 
         if let stream = stream {
-            try? await stream.stop()
+            do {
+                try await stream.stop()
+            } catch {
+                print("[GIF] Error stopping stream: \(error)")
+            }
             self.stream = nil
         }
 
@@ -67,7 +72,7 @@ class GifRecorder: NSObject {
         config.captureResolution = .automatic
 
         let stream = SCStream(filter: filter, configuration: config)
-        try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: .global())
+        try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: DispatchQueue.global())
 
         try await stream.start()
         self.stream = stream
@@ -77,7 +82,7 @@ class GifRecorder: NSObject {
     private func encodeGif(frames: [CGImage]) -> URL? {
         let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("recording_\(UUID().uuidString).gif")
 
-        guard let destination = CGImageDestinationCreateWithURL(tempURL as CFURL, kUTTypeGIF, frames.count, nil) else {
+        guard let destination = CGImageDestinationCreateWithURL(tempURL as CFURL, UTType.gif.identifier as CFString, frames.count, nil) else {
             print("[GIF] Failed to create image destination")
             return nil
         }
@@ -116,7 +121,7 @@ class GifRecorder: NSObject {
     }
 
     private func showRecordingHUD() {
-        let panel = NSPanel(contentRect: NSRect(x: 100, y: 100, width: 200, height: 60), styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
+        let panel = NSPanel(contentRect: CGRect(x: 100, y: 100, width: 200, height: 60), styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
         panel.level = NSWindow.Level.screenSaver
         panel.backgroundColor = NSColor.black.withAlphaComponent(0.8)
         panel.isOpaque = false
@@ -128,10 +133,10 @@ class GifRecorder: NSObject {
         let label = NSTextField(labelWithString: "Recording GIF…")
         label.textColor = .white
         label.font = NSFont.systemFont(ofSize: 14)
-        label.frame = NSRect(x: 10, y: 35, width: 180, height: 20)
+        label.frame = CGRect(x: 10, y: 35, width: 180, height: 20)
         contentView.addSubview(label)
 
-        let stopButton = NSButton(frame: NSRect(x: 10, y: 5, width: 180, height: 25))
+        let stopButton = NSButton(frame: CGRect(x: 10, y: 5, width: 180, height: 25))
         stopButton.title = "Stop"
         stopButton.target = self
         stopButton.action = #selector(stopButtonClicked)
@@ -153,7 +158,11 @@ class GifRecorder: NSObject {
                 // Upload the GIF
                 let settings = AppSettings()
                 let config = AppConfig()
-                try? await UploadManager.shared.upload(imageURL: gifURL, settings: settings, config: config)
+                do {
+                    _ = try await UploadManager.shared.upload(imageURL: gifURL, settings: settings, config: config)
+                } catch {
+                    print("[GIF] Upload failed: \(error)")
+                }
 
                 // Clean up temp file
                 try? FileManager.default.removeItem(at: gifURL)
