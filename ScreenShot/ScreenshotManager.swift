@@ -78,7 +78,14 @@ class ScreenshotManager {
 
             try pngData.write(to: URL(fileURLWithPath: filePath), options: .atomic)
             print("[CAPTURE] Saved to: \(filePath)")
-            return URL(fileURLWithPath: filePath)
+
+            let url = URL(fileURLWithPath: filePath)
+            // Open the screenshot with default image viewer
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NSWorkspace.shared.open(url)
+            }
+
+            return url
         } catch {
             print("[CAPTURE] Failed to save: \(error)")
             return nil

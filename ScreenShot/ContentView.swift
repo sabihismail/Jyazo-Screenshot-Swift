@@ -4,6 +4,7 @@ import AppKit
 struct MenuView: View {
     var settings: AppSettings
     var config: AppConfig
+    @State private var showingPreferences = false
 
     var body: some View {
         Button("Capture Region") {
@@ -29,9 +30,13 @@ struct MenuView: View {
         Divider()
 
         Button("Preferences…") {
-            NSApp.sendAction(Selector(("showPreferences:")), to: nil, from: nil)
+            showingPreferences = true
         }
         .keyboardShortcut(",", modifiers: [.command])
+        .sheet(isPresented: $showingPreferences) {
+            PreferencesView(settings: settings, config: config)
+                .frame(minWidth: 500, minHeight: 400)
+        }
 
         Divider()
 
