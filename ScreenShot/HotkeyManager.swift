@@ -41,17 +41,10 @@ final class HotkeyManager {
             ScreenshotManager.shared.startCapture(settings: settings, config: AppConfig())
         }
 
-        // Check GIF shortcut (default: Cmd+Shift+G)
-        if settings.enableGIFShortcut && matchesHotkey(event, key: settings.gifShortcutKey, modifiers: gifModifiers) {
-            print("[HOTKEY] GIF shortcut triggered")
-            Task {
-                let manager = OverlayWindowController()
-                manager.show { rect in
-                    guard let rect, !rect.isEmpty else { return }
-                    GifRecorder.shared.startRecording(rect: rect, settings: settings)
-                }
-            }
-        }
+        // GIF shortcut disabled for now (TODO: implement GIF recording)
+        // if settings.enableGIFShortcut && matchesHotkey(event, key: settings.gifShortcutKey, modifiers: gifModifiers) {
+        //     print("[HOTKEY] GIF shortcut triggered")
+        // }
     }
 
     private func matchesHotkey(_ event: NSEvent, key: String, modifiers: NSEvent.ModifierFlags) -> Bool {

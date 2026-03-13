@@ -37,16 +37,10 @@ struct PreferencesView: View {
                     }
                 }
 
-                Section("GIF Recording Shortcut") {
-                    Toggle("Enable", isOn: $settings.enableGIFShortcut)
-
-                    if settings.enableGIFShortcut {
-                        HStack {
-                            Text("Shortcut:")
-                            Spacer()
-                            KeyComboView(key: $settings.gifShortcutKey, modifiers: $settings.gifShortcutModifiers)
-                        }
-                    }
+                Section("GIF Recording (Coming Soon)") {
+                    Text("GIF recording will be available in a future update")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
             }
             .tabItem {
