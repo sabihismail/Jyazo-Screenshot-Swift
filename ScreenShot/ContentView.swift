@@ -1,6 +1,31 @@
 import SwiftUI
 import AppKit
 
+class PreferencesWindowManager {
+    static let shared = PreferencesWindowManager()
+    private var preferencesWindow: NSWindow?
+
+    func showPreferences(config: AppConfig) {
+        // Close existing window if open
+        if let window = preferencesWindow, window.isVisible {
+            window.close()
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 100, y: 100, width: 500, height: 400),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Preferences"
+        window.contentView = NSHostingView(rootView: PreferencesView(config: config))
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+
+        self.preferencesWindow = window
+    }
+}
+
 struct MenuView: View {
     var config: AppConfig
 
@@ -29,7 +54,7 @@ struct MenuView: View {
 
         Button("Preferences…") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                openPreferencesWindow(config: config)
+                PreferencesWindowManager.shared.showPreferences(config: config)
             }
         }
         .keyboardShortcut(",", modifiers: [.command])
@@ -40,18 +65,5 @@ struct MenuView: View {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q")
-    }
-
-    private func openPreferencesWindow(config: AppConfig) {
-        let window = NSWindow(
-            contentRect: NSRect(x: 100, y: 100, width: 500, height: 400),
-            styleMask: [.titled, .closable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Preferences"
-        window.contentView = NSHostingView(rootView: PreferencesView(config: config))
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 }
