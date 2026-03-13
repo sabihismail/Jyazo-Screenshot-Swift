@@ -75,13 +75,7 @@ struct PreferencesView: View {
                 }
 
                 Section("GIF Recording") {
-                    HStack {
-                        Text("Frame rate:")
-                        Spacer()
-                        Stepper(value: $config.gifFrameRate, in: 1...30) {
-                            Text("\(config.gifFrameRate) fps")
-                        }
-                    }
+                    Stepper("\(config.gifFrameRate) fps", value: $config.gifFrameRate, in: 1...30)
                 }
             }
             .tabItem {
