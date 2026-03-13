@@ -46,8 +46,24 @@ final class UploadManager: NSObject {
 
     private func authenticateOAuth2(config: AppConfig) async throws {
         return try await withCheckedThrowingContinuation { continuation in
-            let authURL = URL(string: "\(config.serverURL)/api/authenticate")!
             let callbackScheme = "jyazo"
+            let redirectUri = "\(callbackScheme)://callback"
+
+            guard var components = URLComponents(string: "\(config.serverURL)/api/authenticate") else {
+                continuation.resume(throwing: NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"]))
+                return
+            }
+
+            components.queryItems = [
+                URLQueryItem(name: "redirect_uri", value: redirectUri)
+            ]
+
+            guard let authURL = components.url else {
+                continuation.resume(throwing: NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not build auth URL"]))
+                return
+            }
+
+            print("[UPLOAD] Starting OAuth2 flow with URL: \(authURL)")
 
             authSession = ASWebAuthenticationSession(
                 url: authURL,
@@ -65,14 +81,18 @@ final class UploadManager: NSObject {
                     return
                 }
 
-                // Parse token from callback URL
-                if let token = Self.extractToken(from: callbackURL) {
-                    let expiry = Date().addingTimeInterval(3600) // 1 hour default
+                print("[UPLOAD] Callback URL received: \(callbackURL)")
+
+                // Parse token and expiry from callback URL
+                if let token = Self.extractToken(from: callbackURL),
+                   let expiresAtStr = Self.extractParameter(from: callbackURL, name: "expiresAt"),
+                   let expiresAt = TimeInterval(expiresAtStr) {
+                    let expiry = Date(timeIntervalSince1970: expiresAt)
                     config.saveToken(token, expiry: expiry, for: config.serverURL)
-                    print("[UPLOAD] ✓ Token obtained and saved")
+                    print("[UPLOAD] ✓ Token obtained and saved (expires \(expiry))")
                     continuation.resume()
                 } else {
-                    print("[UPLOAD] Could not extract token from callback URL")
+                    print("[UPLOAD] Could not extract token or expiry from callback URL")
                     continuation.resume(throwing: NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid token in callback"]))
                 }
             }
@@ -142,8 +162,12 @@ final class UploadManager: NSObject {
     }
 
     private static func extractToken(from url: URL) -> String? {
+        return extractParameter(from: url, name: "token")
+    }
+
+    private static func extractParameter(from url: URL, name: String) -> String? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
-        return components.queryItems?.first(where: { $0.name == "token" })?.value
+        return components.queryItems?.first(where: { $0.name == name })?.value
     }
 }
 
