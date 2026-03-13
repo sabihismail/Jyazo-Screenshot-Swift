@@ -13,11 +13,13 @@ class ScreenshotManager {
         self.currentSettings = settings
         self.currentConfig = config
 
+        // Request permission if not granted, but proceed anyway
+        // The system will handle permission checks during capture
         if !CGPreflightScreenCaptureAccess() {
             CGRequestScreenCaptureAccess()
-            return
         }
 
+        // Show overlay regardless - permission will be validated during actual capture
         overlayController = OverlayWindowController()
         overlayController?.show { [weak self] rect in
             guard let rect, !rect.isEmpty else { return }
