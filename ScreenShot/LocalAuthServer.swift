@@ -2,7 +2,7 @@ import Foundation
 
 class LocalAuthServer {
     private var server: HTTPServer?
-    private let port: UInt16 = 52805
+    private let port: UInt16 = 8080
 
     func startAndWait() async throws -> (token: String, expiresAt: Date) {
         return try await withCheckedThrowingContinuation { continuation in
