@@ -13,6 +13,19 @@ struct MenuView: View {
         }
         .keyboardShortcut("4", modifiers: [.command, .shift])
 
+        Button("Record GIF") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                Task {
+                    let manager = OverlayWindowController()
+                    manager.show { rect in
+                        guard let rect, !rect.isEmpty else { return }
+                        GifRecorder.shared.startRecording(rect: rect, settings: settings)
+                    }
+                }
+            }
+        }
+        .keyboardShortcut("g", modifiers: [.command, .shift])
+
         Divider()
 
         Button("Preferences…") {
