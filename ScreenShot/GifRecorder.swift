@@ -71,17 +71,10 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         config.height = Int(rect.height)
         config.captureResolution = .automatic
 
-        let stream = SCStream(filter: filter, configuration: config)
+        let stream = SCStream(filter: filter, configuration: config, delegate: self)
 
-        // Add stream output - no delegate parameter
-        do {
-            try stream.addStreamOutput(type: SCStreamOutputType.screen, sampleHandlerQueue: DispatchQueue.main)
-        } catch {
-            print("[GIF] Failed to add stream output: \(error)")
-            throw error
-        }
-
-        stream.delegate = self
+        // Add stream output
+        try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: DispatchQueue.main)
 
         try await stream.start()
         self.stream = stream
