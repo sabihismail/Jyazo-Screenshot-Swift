@@ -30,13 +30,11 @@ struct MenuView: View {
         Divider()
 
         Button("Preferences…") {
-            showingPreferences = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                openPreferencesWindow(settings: settings, config: config)
+            }
         }
         .keyboardShortcut(",", modifiers: [.command])
-        .sheet(isPresented: $showingPreferences) {
-            PreferencesView(settings: settings, config: config)
-                .frame(minWidth: 500, minHeight: 400)
-        }
 
         Divider()
 
@@ -44,5 +42,18 @@ struct MenuView: View {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q")
+    }
+
+    private func openPreferencesWindow(settings: AppSettings, config: AppConfig) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 100, y: 100, width: 500, height: 400),
+            styleMask: [.titled, .closable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Preferences"
+        window.contentView = NSHostingView(rootView: PreferencesView(settings: settings, config: config))
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
