@@ -9,12 +9,17 @@ struct ScreenShotApp: App {
         MenuBarExtra("ScreenShot", systemImage: "camera.viewfinder") {
             MenuView(settings: settings, config: config)
         }
-        .onAppear {
-            HotkeyManager.shared.start(settings: settings)
-        }
 
         Settings {
             PreferencesView(settings: settings, config: config)
+        }
+    }
+
+    init() {
+        // Initialize hotkey manager with a slight delay to ensure state is ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            let appSettings = AppSettings()
+            HotkeyManager.shared.start(settings: appSettings)
         }
     }
 }
