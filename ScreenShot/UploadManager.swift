@@ -16,6 +16,7 @@ final class UploadManager: NSObject {
     static let shared = UploadManager()
 
     private var authSession: ASWebAuthenticationSession?
+    private var authServer: LocalAuthServer?
 
     func upload(imageURL: URL, config: AppConfig) async throws -> String {
         guard !config.serverURL.isEmpty else {
@@ -45,9 +46,15 @@ final class UploadManager: NSObject {
     }
 
     private func authenticateOAuth2(config: AppConfig) async throws {
+        // Start local server to receive OAuth callback
+        let authServer = LocalAuthServer()
+        self.authServer = authServer
+
+        let (token, expiresAt) = try await authServer.startAndWait()
+
+        // Now open the auth URL in browser
         return try await withCheckedThrowingContinuation { continuation in
-            let callbackScheme = "jyazo"
-            let redirectUri = "\(callbackScheme)://callback"
+            let redirectUri = authServer.getRedirectUri()
 
             guard var components = URLComponents(string: "\(config.serverURL)/api/authenticate") else {
                 continuation.resume(throwing: NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"]))
@@ -63,42 +70,13 @@ final class UploadManager: NSObject {
                 return
             }
 
-            print("[UPLOAD] Starting OAuth2 flow with URL: \(authURL)")
+            print("[UPLOAD] Opening browser for OAuth2: \(authURL)")
+            NSWorkspace.shared.open(authURL)
 
-            authSession = ASWebAuthenticationSession(
-                url: authURL,
-                callbackURLScheme: callbackScheme
-            ) { callbackURL, error in
-                if let error = error {
-                    print("[UPLOAD] OAuth2 session error: \(error)")
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                guard let callbackURL = callbackURL else {
-                    print("[UPLOAD] No callback URL received")
-                    continuation.resume(throwing: NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "No callback URL"]))
-                    return
-                }
-
-                print("[UPLOAD] Callback URL received: \(callbackURL)")
-
-                // Parse token and expiry from callback URL
-                if let token = Self.extractToken(from: callbackURL),
-                   let expiresAtStr = Self.extractParameter(from: callbackURL, name: "expiresAt"),
-                   let expiresAt = TimeInterval(expiresAtStr) {
-                    let expiry = Date(timeIntervalSince1970: expiresAt)
-                    config.saveToken(token, expiry: expiry, for: config.serverURL)
-                    print("[UPLOAD] ✓ Token obtained and saved (expires \(expiry))")
-                    continuation.resume()
-                } else {
-                    print("[UPLOAD] Could not extract token or expiry from callback URL")
-                    continuation.resume(throwing: NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid token in callback"]))
-                }
-            }
-
-            authSession?.presentationContextProvider = self
-            authSession?.start()
+            // Token already received from local server
+            config.saveToken(token, expiry: expiresAt, for: config.serverURL)
+            print("[UPLOAD] ✓ Token obtained and saved (expires \(expiresAt))")
+            continuation.resume()
         }
     }
 
