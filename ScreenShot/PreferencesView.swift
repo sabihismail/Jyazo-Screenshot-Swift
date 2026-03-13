@@ -5,82 +5,70 @@ struct PreferencesView: View {
     @State var testConnectionStatus = ""
 
     var body: some View {
-        TabView {
-            Form {
-                Section("Server") {
-                    TextField("Server URL", text: $config.serverURL)
-                        .textFieldStyle(.roundedBorder)
+        Form {
+            Section("Server") {
+                TextField("Server URL", text: $config.serverURL)
+                    .textFieldStyle(.roundedBorder)
 
+                HStack {
+                    Button("Test Connection") {
+                        testConnection()
+                    }
+                    Spacer()
+                    if !testConnectionStatus.isEmpty {
+                        Text(testConnectionStatus)
+                            .font(.caption)
+                            .foregroundColor(testConnectionStatus.contains("✓") ? .green : .red)
+                    }
+                }
+            }
+
+            Section("Image Capture Shortcut") {
+                Toggle("Enable", isOn: $config.enableImageShortcut)
+
+                if config.enableImageShortcut {
                     HStack {
-                        Button("Test Connection") {
-                            testConnection()
-                        }
+                        Text("Shortcut:")
                         Spacer()
-                        if !testConnectionStatus.isEmpty {
-                            Text(testConnectionStatus)
-                                .font(.caption)
-                                .foregroundColor(testConnectionStatus.contains("✓") ? .green : .red)
-                        }
+                        KeyComboView(key: $config.imageShortcutKey, modifiers: $config.imageShortcutModifiers)
                     }
                 }
+            }
 
-                Section("Image Capture Shortcut") {
-                    Toggle("Enable", isOn: $config.enableImageShortcut)
+            Section("GIF Recording Shortcut") {
+                Toggle("Enable", isOn: $config.enableGIFShortcut)
 
-                    if config.enableImageShortcut {
-                        HStack {
-                            Text("Shortcut:")
-                            Spacer()
-                            KeyComboView(key: $config.imageShortcutKey, modifiers: $config.imageShortcutModifiers)
-                        }
+                if config.enableGIFShortcut {
+                    HStack {
+                        Text("Shortcut:")
+                        Spacer()
+                        KeyComboView(key: $config.gifShortcutKey, modifiers: $config.gifShortcutModifiers)
                     }
                 }
+            }
 
-                Section("GIF Recording Shortcut") {
-                    Toggle("Enable", isOn: $config.enableGIFShortcut)
+            Section("Save Settings") {
+                Toggle("Save all captured images", isOn: $config.saveAllImages)
 
-                    if config.enableGIFShortcut {
-                        HStack {
-                            Text("Shortcut:")
-                            Spacer()
-                            KeyComboView(key: $config.gifShortcutKey, modifiers: $config.gifShortcutModifiers)
+                if config.saveAllImages {
+                    HStack {
+                        Text("Save to:")
+                        Spacer()
+                        Button(action: { selectSaveDirectory() }) {
+                            Text(config.saveDirectory.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                                .lineLimit(1)
+                            Image(systemName: "folder")
                         }
                     }
                 }
             }
-            .tabItem {
-                Image(systemName: "gear")
-                Text("General")
+
+            Section("Notifications") {
+                Toggle("Play sound on completion", isOn: $config.enableSound)
             }
 
-            Form {
-                Section("Save Settings") {
-                    Toggle("Save all captured images", isOn: $config.saveAllImages)
-
-                    if config.saveAllImages {
-                        HStack {
-                            Text("Save to:")
-                            Spacer()
-                            Button(action: { selectSaveDirectory() }) {
-                                Text(config.saveDirectory.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
-                                    .lineLimit(1)
-                                Image(systemName: "folder")
-                            }
-                        }
-                    }
-                }
-
-                Section("Notifications") {
-                    Toggle("Play sound on completion", isOn: $config.enableSound)
-                }
-
-                Section("GIF Recording") {
-                    Stepper("\(config.gifFrameRate) fps", value: $config.gifFrameRate, in: 1...30)
-                }
-            }
-            .tabItem {
-                Image(systemName: "slider.horizontal.3")
-                Text("Capture")
+            Section("GIF Recording") {
+                Stepper("\(config.gifFrameRate) fps", value: $config.gifFrameRate, in: 1...30)
             }
         }
         .padding()
