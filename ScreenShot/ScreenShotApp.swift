@@ -9,13 +9,12 @@ struct ScreenShotApp: App {
         MenuBarExtra("ScreenShot", systemImage: "camera.viewfinder") {
             MenuView(settings: settings, config: config)
         }
+        .onAppear {
+            HotkeyManager.shared.start(settings: settings)
+        }
 
         Settings {
             PreferencesView(settings: settings, config: config)
         }
-    }
-
-    init() {
-        HotkeyManager.shared.start(settings: settings)
     }
 }

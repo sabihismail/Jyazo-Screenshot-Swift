@@ -65,7 +65,7 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
 
         let filter = SCContentFilter(display: display, excludingWindows: [])
 
-        var config = SCStreamConfiguration()
+        let config = SCStreamConfiguration()
         config.sourceRect = rect
         config.width = Int(rect.width)
         config.height = Int(rect.height)
