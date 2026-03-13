@@ -29,9 +29,7 @@ struct MenuView: View {
         Divider()
 
         Button("Preferences…") {
-            // The ⌘, shortcut will automatically open Settings
-            // Just close the menu
-            NSApp.keyWindow?.close()
+            NSApp.sendAction(Selector(("showPreferences:")), to: nil, from: nil)
         }
         .keyboardShortcut(",", modifiers: [.command])
 
