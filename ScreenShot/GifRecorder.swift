@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 import CoreMedia
 
 @MainActor
-class GifRecorder: NSObject, SCStreamOutput {
+class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     static let shared = GifRecorder()
 
     private var stream: SCStream?
@@ -73,9 +73,13 @@ class GifRecorder: NSObject, SCStreamOutput {
 
         let stream = SCStream(filter: filter, configuration: config)
 
-        // Try different method signatures
-        let queue = DispatchQueue.main
-        try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
+        // Add delegate and output
+        do {
+            try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: DispatchQueue.main, delegate: self)
+        } catch {
+            print("[GIF] Failed to add stream output: \(error)")
+            throw error
+        }
 
         try await stream.start()
         self.stream = stream
