@@ -76,7 +76,7 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         // Add stream output
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: DispatchQueue.main)
 
-        try await stream.start()
+        try await stream.begin()
         self.stream = stream
         print("[GIF] Recording started")
     }
