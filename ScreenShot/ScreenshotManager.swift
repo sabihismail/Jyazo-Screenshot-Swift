@@ -6,11 +6,9 @@ class ScreenshotManager {
     static let shared = ScreenshotManager()
 
     private var overlayController: OverlayWindowController?
-    private var currentSettings: AppSettings?
     private var currentConfig: AppConfig?
 
-    func startCapture(settings: AppSettings, config: AppConfig) {
-        self.currentSettings = settings
+    func startCapture(config: AppConfig) {
         self.currentConfig = config
 
         // Request permission if not granted, but proceed anyway
@@ -34,8 +32,8 @@ class ScreenshotManager {
 
                 // Save to disk if enabled
                 var savedURL: URL?
-                if let settings = currentSettings, settings.saveAllImages {
-                    savedURL = saveToDisk(image: image, directory: settings.saveDirectory)
+                if let config = currentConfig, config.saveAllImages {
+                    savedURL = saveToDisk(image: image, directory: config.saveDirectory)
                 }
 
                 // Copy to clipboard
@@ -44,14 +42,14 @@ class ScreenshotManager {
                 pasteboard.writeObjects([image])
 
                 // Upload to server
-                if let settings = currentSettings, let config = currentConfig {
+                if let config = currentConfig {
                     if let url = savedURL {
-                        _ = try await UploadManager.shared.upload(imageURL: url, settings: settings, config: config)
+                        _ = try await UploadManager.shared.upload(imageURL: url, config: config)
                     } else {
                         // If not saved to disk, save to temp and upload
                         let tempURL = saveToDisk(image: image, directory: NSTemporaryDirectory())
                         if let tempURL = tempURL {
-                            _ = try await UploadManager.shared.upload(imageURL: tempURL, settings: settings, config: config)
+                            _ = try await UploadManager.shared.upload(imageURL: tempURL, config: config)
                             try? FileManager.default.removeItem(at: tempURL)
                         }
                     }

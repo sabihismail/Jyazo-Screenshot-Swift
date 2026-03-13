@@ -6,20 +6,20 @@ final class HotkeyManager {
 
     private var eventMonitor: Any?
 
-    func start(settings: AppSettings) {
-        setupGlobalHotkeys(settings: settings)
+    func start(config: AppConfig) {
+        setupGlobalHotkeys(config: config)
     }
 
-    func update(settings: AppSettings) {
+    func update(config: AppConfig) {
         // Restart monitoring with new settings
         stopMonitoring()
-        setupGlobalHotkeys(settings: settings)
+        setupGlobalHotkeys(config: config)
     }
 
-    private func setupGlobalHotkeys(settings: AppSettings) {
+    private func setupGlobalHotkeys(config: AppConfig) {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
             Task { @MainActor in
-                self.handleKeyEvent(event, settings: settings)
+                self.handleKeyEvent(event, config: config)
             }
         }
     }
@@ -31,24 +31,24 @@ final class HotkeyManager {
         }
     }
 
-    private func handleKeyEvent(_ event: NSEvent, settings: AppSettings) {
-        let modifiers = NSEvent.ModifierFlags(rawValue: settings.imageShortcutModifiers)
-        let gifModifiers = NSEvent.ModifierFlags(rawValue: settings.gifShortcutModifiers)
+    private func handleKeyEvent(_ event: NSEvent, config: AppConfig) {
+        let modifiers = NSEvent.ModifierFlags(rawValue: config.imageShortcutModifiers)
+        let gifModifiers = NSEvent.ModifierFlags(rawValue: config.gifShortcutModifiers)
 
         // Check image shortcut (default: Cmd+Shift+C)
-        if settings.enableImageShortcut && matchesHotkey(event, key: settings.imageShortcutKey, modifiers: modifiers) {
+        if config.enableImageShortcut && matchesHotkey(event, key: config.imageShortcutKey, modifiers: modifiers) {
             print("[HOTKEY] Image shortcut triggered")
-            ScreenshotManager.shared.startCapture(settings: settings, config: AppConfig())
+            ScreenshotManager.shared.startCapture(config: config)
         }
 
         // Check GIF shortcut (default: Cmd+Shift+G)
-        if settings.enableGIFShortcut && matchesHotkey(event, key: settings.gifShortcutKey, modifiers: gifModifiers) {
+        if config.enableGIFShortcut && matchesHotkey(event, key: config.gifShortcutKey, modifiers: gifModifiers) {
             print("[HOTKEY] GIF shortcut triggered")
             Task {
                 let manager = OverlayWindowController()
                 manager.show { rect in
                     guard let rect, !rect.isEmpty else { return }
-                    GifRecorder.shared.startRecording(rect: rect, settings: settings)
+                    GifRecorder.shared.startRecording(rect: rect, config: config)
                 }
             }
         }

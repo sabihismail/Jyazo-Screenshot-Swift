@@ -2,14 +2,12 @@ import SwiftUI
 import AppKit
 
 struct MenuView: View {
-    var settings: AppSettings
     var config: AppConfig
-    @State private var showingPreferences = false
 
     var body: some View {
         Button("Capture Region") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                ScreenshotManager.shared.startCapture(settings: settings, config: config)
+                ScreenshotManager.shared.startCapture(config: config)
             }
         }
         .keyboardShortcut("4", modifiers: [.command, .shift])
@@ -20,7 +18,7 @@ struct MenuView: View {
                     let manager = OverlayWindowController()
                     manager.show { rect in
                         guard let rect, !rect.isEmpty else { return }
-                        GifRecorder.shared.startRecording(rect: rect, settings: settings)
+                        GifRecorder.shared.startRecording(rect: rect, config: config)
                     }
                 }
             }
@@ -31,7 +29,7 @@ struct MenuView: View {
 
         Button("Preferences…") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                openPreferencesWindow(settings: settings, config: config)
+                openPreferencesWindow(config: config)
             }
         }
         .keyboardShortcut(",", modifiers: [.command])
@@ -44,7 +42,7 @@ struct MenuView: View {
         .keyboardShortcut("q")
     }
 
-    private func openPreferencesWindow(settings: AppSettings, config: AppConfig) {
+    private func openPreferencesWindow(config: AppConfig) {
         let window = NSWindow(
             contentRect: NSRect(x: 100, y: 100, width: 500, height: 400),
             styleMask: [.titled, .closable, .resizable],
@@ -52,7 +50,7 @@ struct MenuView: View {
             defer: false
         )
         window.title = "Preferences"
-        window.contentView = NSHostingView(rootView: PreferencesView(settings: settings, config: config))
+        window.contentView = NSHostingView(rootView: PreferencesView(config: config))
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

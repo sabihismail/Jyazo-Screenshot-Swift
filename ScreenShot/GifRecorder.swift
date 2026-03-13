@@ -14,7 +14,7 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var isRecording = false
     private var recordingWindow: NSWindow?
 
-    func startRecording(rect: CGRect, settings: AppSettings) {
+    func startRecording(rect: CGRect, config: AppConfig) {
         recordingRect = rect
         frames.removeAll()
         isRecording = true
@@ -157,10 +157,9 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     @objc private func stopButtonClicked() {
         Task {
             if let gifURL = await stopRecording() {
-                let settings = AppSettings()
                 let config = AppConfig()
                 do {
-                    _ = try await UploadManager.shared.upload(imageURL: gifURL, settings: settings, config: config)
+                    _ = try await UploadManager.shared.upload(imageURL: gifURL, config: config)
                 } catch {
                     print("[GIF] Upload failed: \(error)")
                 }

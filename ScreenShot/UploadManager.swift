@@ -17,18 +17,18 @@ final class UploadManager: NSObject {
 
     private var authSession: ASWebAuthenticationSession?
 
-    func upload(imageURL: URL, settings: AppSettings, config: AppConfig) async throws -> String {
-        guard !settings.serverURL.isEmpty else {
+    func upload(imageURL: URL, config: AppConfig) async throws -> String {
+        guard !config.serverURL.isEmpty else {
             // No server configured, just keep clipboard copy
             print("[UPLOAD] No server configured, skipping upload")
             return ""
         }
 
         // Check if token exists and is not expired
-        if config.token(for: settings.serverURL) == nil || config.isTokenExpired(for: settings.serverURL) {
+        if config.token(for: config.serverURL) == nil || config.isTokenExpired(for: config.serverURL) {
             print("[UPLOAD] Token missing or expired, starting OAuth2 flow")
             do {
-                try await authenticateOAuth2(config: config, settings: settings)
+                try await authenticateOAuth2(config: config)
             } catch {
                 print("[UPLOAD] OAuth2 authentication failed: \(error)")
                 return ""
@@ -36,17 +36,17 @@ final class UploadManager: NSObject {
         }
 
         // Upload the file
-        guard let token = config.token(for: settings.serverURL) else {
+        guard let token = config.token(for: config.serverURL) else {
             print("[UPLOAD] Still no token after authentication")
             return ""
         }
 
-        return try await uploadToServer(imageURL: imageURL, token: token, settings: settings, config: config)
+        return try await uploadToServer(imageURL: imageURL, token: token, config: config)
     }
 
-    private func authenticateOAuth2(config: AppConfig, settings: AppSettings) async throws {
+    private func authenticateOAuth2(config: AppConfig) async throws {
         return try await withCheckedThrowingContinuation { continuation in
-            let authURL = URL(string: "\(settings.serverURL)/api/authenticate")!
+            let authURL = URL(string: "\(config.serverURL)/api/authenticate")!
             let callbackScheme = "jyazo"
 
             authSession = ASWebAuthenticationSession(
@@ -68,7 +68,7 @@ final class UploadManager: NSObject {
                 // Parse token from callback URL
                 if let token = Self.extractToken(from: callbackURL) {
                     let expiry = Date().addingTimeInterval(3600) // 1 hour default
-                    config.saveToken(token, expiry: expiry, for: settings.serverURL)
+                    config.saveToken(token, expiry: expiry, for: config.serverURL)
                     print("[UPLOAD] ✓ Token obtained and saved")
                     continuation.resume()
                 } else {
@@ -82,8 +82,8 @@ final class UploadManager: NSObject {
         }
     }
 
-    private func uploadToServer(imageURL: URL, token: String, settings: AppSettings, config: AppConfig) async throws -> String {
-        var request = URLRequest(url: URL(string: "\(settings.serverURL)/api/ss/uploadScreenShot")!)
+    private func uploadToServer(imageURL: URL, token: String, config: AppConfig) async throws -> String {
+        var request = URLRequest(url: URL(string: "\(config.serverURL)/api/ss/uploadScreenShot")!)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
@@ -129,7 +129,7 @@ final class UploadManager: NSObject {
             NSPasteboard.general.setString(outputURL, forType: .string)
 
             // Play sound if enabled
-            if AppSettings().enableSound {
+            if config.enableSound {
                 NSSound(named: "Glass")?.play()
             }
 

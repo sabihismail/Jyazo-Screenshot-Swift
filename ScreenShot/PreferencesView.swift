@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct PreferencesView: View {
-    @State var settings: AppSettings
     @State var config: AppConfig
     @State var testConnectionStatus = ""
 
@@ -9,7 +8,7 @@ struct PreferencesView: View {
         TabView {
             Form {
                 Section("Server") {
-                    TextField("Server URL", text: $settings.serverURL)
+                    TextField("Server URL", text: $config.serverURL)
                         .textFieldStyle(.roundedBorder)
 
                     HStack {
@@ -26,25 +25,25 @@ struct PreferencesView: View {
                 }
 
                 Section("Image Capture Shortcut") {
-                    Toggle("Enable", isOn: $settings.enableImageShortcut)
+                    Toggle("Enable", isOn: $config.enableImageShortcut)
 
-                    if settings.enableImageShortcut {
+                    if config.enableImageShortcut {
                         HStack {
                             Text("Shortcut:")
                             Spacer()
-                            KeyComboView(key: $settings.imageShortcutKey, modifiers: $settings.imageShortcutModifiers)
+                            KeyComboView(key: $config.imageShortcutKey, modifiers: $config.imageShortcutModifiers)
                         }
                     }
                 }
 
                 Section("GIF Recording Shortcut") {
-                    Toggle("Enable", isOn: $settings.enableGIFShortcut)
+                    Toggle("Enable", isOn: $config.enableGIFShortcut)
 
-                    if settings.enableGIFShortcut {
+                    if config.enableGIFShortcut {
                         HStack {
                             Text("Shortcut:")
                             Spacer()
-                            KeyComboView(key: $settings.gifShortcutKey, modifiers: $settings.gifShortcutModifiers)
+                            KeyComboView(key: $config.gifShortcutKey, modifiers: $config.gifShortcutModifiers)
                         }
                     }
                 }
@@ -56,14 +55,14 @@ struct PreferencesView: View {
 
             Form {
                 Section("Save Settings") {
-                    Toggle("Save all captured images", isOn: $settings.saveAllImages)
+                    Toggle("Save all captured images", isOn: $config.saveAllImages)
 
-                    if settings.saveAllImages {
+                    if config.saveAllImages {
                         HStack {
                             Text("Save to:")
                             Spacer()
                             Button(action: { selectSaveDirectory() }) {
-                                Text(settings.saveDirectory.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                                Text(config.saveDirectory.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
                                     .lineLimit(1)
                                 Image(systemName: "folder")
                             }
@@ -72,15 +71,15 @@ struct PreferencesView: View {
                 }
 
                 Section("Notifications") {
-                    Toggle("Play sound on completion", isOn: $settings.enableSound)
+                    Toggle("Play sound on completion", isOn: $config.enableSound)
                 }
 
                 Section("GIF Recording") {
                     HStack {
                         Text("Frame rate:")
                         Spacer()
-                        Stepper(value: $settings.gifFrameRate, in: 1...30) {
-                            Text("\(settings.gifFrameRate) fps")
+                        Stepper(value: $config.gifFrameRate, in: 1...30) {
+                            Text("\(config.gifFrameRate) fps")
                         }
                     }
                 }
@@ -95,14 +94,14 @@ struct PreferencesView: View {
     }
 
     private func testConnection() {
-        guard !settings.serverURL.isEmpty else {
+        guard !config.serverURL.isEmpty else {
             testConnectionStatus = "❌ No server URL configured"
             return
         }
 
         Task {
             do {
-                let url = URL(string: settings.serverURL)!
+                let url = URL(string: config.serverURL)!
                 var request = URLRequest(url: url)
                 request.timeoutInterval = 5
 
@@ -124,10 +123,10 @@ struct PreferencesView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.directoryURL = URL(fileURLWithPath: settings.saveDirectory)
+        panel.directoryURL = URL(fileURLWithPath: config.saveDirectory)
 
         if panel.runModal() == .OK, let url = panel.url {
-            settings.saveDirectory = url.path
+            config.saveDirectory = url.path
         }
     }
 }
@@ -190,8 +189,5 @@ struct KeyComboView: View {
 }
 
 #Preview {
-    PreferencesView(
-        settings: AppSettings(),
-        config: AppConfig()
-    )
+    PreferencesView(config: AppConfig())
 }
