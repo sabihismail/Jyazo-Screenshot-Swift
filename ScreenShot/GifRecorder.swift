@@ -37,10 +37,11 @@ class GifRecorder: NSObject {
         hideRecordingHUD()
 
         if let stream = stream {
+            // Stop the stream by removing the output
             do {
-                try await stream.stop()
+                try stream.removeStreamOutput(self, type: .screen)
             } catch {
-                print("[GIF] Error stopping stream: \(error)")
+                print("[GIF] Error removing stream output: \(error)")
             }
             self.stream = nil
         }
@@ -72,7 +73,7 @@ class GifRecorder: NSObject {
         config.captureResolution = .automatic
 
         let stream = SCStream(filter: filter, configuration: config)
-        try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: DispatchQueue.global())
+        try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: nil)
 
         try await stream.start()
         self.stream = stream
@@ -121,13 +122,14 @@ class GifRecorder: NSObject {
     }
 
     private func showRecordingHUD() {
-        let panel = NSPanel(contentRect: CGRect(x: 100, y: 100, width: 200, height: 60), styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
+        let frame = NSRect(x: 100, y: 100, width: 200, height: 60)
+        let panel = NSPanel(contentRect: frame, styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
         panel.level = NSWindow.Level.screenSaver
         panel.backgroundColor = NSColor.black.withAlphaComponent(0.8)
         panel.isOpaque = false
         panel.hasShadow = false
 
-        let contentView = NSView(frame: panel.contentRect)
+        let contentView = NSView(frame: frame)
         contentView.wantsLayer = true
 
         let label = NSTextField(labelWithString: "Recording GIF…")
