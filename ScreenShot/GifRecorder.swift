@@ -73,9 +73,9 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
 
         let stream = SCStream(filter: filter, configuration: config)
 
-        // Add stream output with nil delegate
+        // Add stream output - no delegate parameter
         do {
-            try stream.addStreamOutput(type: SCStreamOutputType.screen, sampleHandlerQueue: DispatchQueue.main, delegate: nil)
+            try stream.addStreamOutput(type: SCStreamOutputType.screen, sampleHandlerQueue: DispatchQueue.main)
         } catch {
             print("[GIF] Failed to add stream output: \(error)")
             throw error
