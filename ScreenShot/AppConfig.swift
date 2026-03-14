@@ -130,6 +130,24 @@ final class AppConfig {
         return Date(timeIntervalSince1970: expiry) < Date()
     }
 
+    func deleteToken(for server: String) {
+        let baseURL = extractBaseURL(server)
+
+        // Delete from Keychain
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: baseURL
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+
+        // Delete expiry from UserDefaults
+        let expiryKey = "tokenExpiry_\(baseURL)"
+        UserDefaults.standard.removeObject(forKey: expiryKey)
+
+        print("[AUTH] Deleted token for \(baseURL)")
+    }
+
     private func extractBaseURL(_ urlString: String) -> String {
         guard let url = URL(string: urlString.starts(with: "http") ? urlString : "http://\(urlString)") else {
             return urlString

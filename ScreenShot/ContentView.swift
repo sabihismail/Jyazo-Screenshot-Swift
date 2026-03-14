@@ -59,6 +59,10 @@ struct MenuView: View {
         }
         .keyboardShortcut(",", modifiers: [.command])
 
+        Button("Clear Token") {
+            config.deleteToken(for: config.serverURL)
+        }
+
         Divider()
 
         Button("Quit") {
