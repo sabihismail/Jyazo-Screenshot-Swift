@@ -12,11 +12,13 @@ class ScreenshotManager {
     func startCapture(config: AppConfig) {
         self.currentConfig = config
 
-        // Request permission only once
+        // Request permission only once (skip in debug to avoid repeated prompts between builds)
+        #if !DEBUG
         if !CGPreflightScreenCaptureAccess() && !hasRequestedPermission {
             CGRequestScreenCaptureAccess()
             hasRequestedPermission = true
         }
+        #endif
 
         // Show overlay regardless - permission will be validated during actual capture
         overlayController = OverlayWindowController()
