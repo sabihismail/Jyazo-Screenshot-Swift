@@ -13,7 +13,6 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var recordingRect: CGRect = .zero
     private var isRecording = false
     private var recordingWindow: NSWindow?
-    private var hasRequestedPermission = false
 
     func startRecording(rect: CGRect, config: AppConfig) {
         recordingRect = rect
