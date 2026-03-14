@@ -15,9 +15,6 @@ struct ServerResponse: Decodable {
 final class UploadManager: NSObject {
     static let shared = UploadManager()
 
-    private var authSession: ASWebAuthenticationSession?
-    private var authServer: LocalAuthServer?
-
     func upload(imageURL: URL, config: AppConfig) async throws -> String {
         guard !config.serverURL.isEmpty else {
             // No server configured, just keep clipboard copy
@@ -46,38 +43,49 @@ final class UploadManager: NSObject {
     }
 
     private func authenticateOAuth2(config: AppConfig) async throws {
-        // Start local server to receive OAuth callback
         let authServer = LocalAuthServer()
-        self.authServer = authServer
 
-        let (token, expiresAt) = try await authServer.startAndWait()
-
-        // Now open the auth URL in browser
-        return try await withCheckedThrowingContinuation { continuation in
-            let redirectUri = authServer.getRedirectUri()
-
-            guard var components = URLComponents(string: "\(config.serverURL)/api/authenticate") else {
-                continuation.resume(throwing: NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"]))
-                return
-            }
-
-            components.queryItems = [
-                URLQueryItem(name: "redirect_uri", value: redirectUri)
-            ]
-
-            guard let authURL = components.url else {
-                continuation.resume(throwing: NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not build auth URL"]))
-                return
-            }
-
-            print("[UPLOAD] Opening browser for OAuth2: \(authURL)")
-            NSWorkspace.shared.open(authURL)
-
-            // Token already received from local server
-            config.saveToken(token, expiry: expiresAt, for: config.serverURL)
-            print("[UPLOAD] ✓ Token obtained and saved (expires \(expiresAt))")
-            continuation.resume()
+        guard let authURL = authServer.getAuthURL(for: config.serverURL) else {
+            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"])
         }
+
+        print("[UPLOAD] Opening browser for OAuth2: \(authURL)")
+        NSWorkspace.shared.open(authURL)
+
+        // Show alert asking user to complete authentication
+        let alert = NSAlert()
+        alert.messageText = "Authentication Required"
+        alert.informativeText = "A browser window has opened. Please authenticate, then paste the token from the redirect URL here."
+        alert.addButton(withTitle: "Paste Token")
+        alert.addButton(withTitle: "Cancel")
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "User cancelled authentication"])
+        }
+
+        // Ask user to paste the token
+        let tokenAlert = NSAlert()
+        tokenAlert.messageText = "Enter Token"
+        tokenAlert.informativeText = "Paste the token from the URL bar (the 'token' parameter):"
+        tokenAlert.addButton(withTitle: "OK")
+        tokenAlert.addButton(withTitle: "Cancel")
+
+        let tokenTextField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        tokenTextField.placeholderString = "eyJhbGc..."
+        tokenAlert.accessoryView = tokenTextField
+
+        guard tokenAlert.runModal() == .alertFirstButtonReturn, !tokenTextField.stringValue.isEmpty else {
+            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "No token provided"])
+        }
+
+        let token = tokenTextField.stringValue
+
+        // Try to extract expiresAt from the URL or use default (6 months)
+        let sixMonthsInSeconds: TimeInterval = 6 * 30 * 24 * 60 * 60
+        let expiresAt = Date().addingTimeInterval(sixMonthsInSeconds)
+
+        config.saveToken(token, expiry: expiresAt, for: config.serverURL)
+        print("[UPLOAD] ✓ Token obtained and saved (expires \(expiresAt))")
     }
 
     private func uploadToServer(imageURL: URL, token: String, config: AppConfig) async throws -> String {
