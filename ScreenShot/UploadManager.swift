@@ -49,40 +49,30 @@ final class UploadManager: NSObject {
             throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"])
         }
 
+        // Start listening for callback in background
+        let callbackTask = Task {
+            try await authServer.listenForCallback()
+        }
+
+        // Open browser for authentication
         print("[UPLOAD] Opening browser for OAuth2: \(authURL)")
         NSWorkspace.shared.open(authURL)
 
-        // Show alert asking user to complete authentication
-        let alert = NSAlert()
-        alert.messageText = "Authentication Required"
-        alert.informativeText = "A browser window has opened. Please authenticate, then paste the token from the redirect URL here."
-        alert.addButton(withTitle: "Paste Token")
-        alert.addButton(withTitle: "Cancel")
-
-        guard alert.runModal() == .alertFirstButtonReturn else {
-            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "User cancelled authentication"])
+        // Wait for callback with timeout
+        let timeoutTask = Task {
+            try await Task.sleep(nanoseconds: 300_000_000_000) // 5 minutes
+            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Authentication timeout"])
         }
 
-        // Ask user to paste the token
-        let tokenAlert = NSAlert()
-        tokenAlert.messageText = "Enter Token"
-        tokenAlert.informativeText = "Paste the token from the URL bar (the 'token' parameter):"
-        tokenAlert.addButton(withTitle: "OK")
-        tokenAlert.addButton(withTitle: "Cancel")
-
-        let tokenTextField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-        tokenTextField.placeholderString = "eyJhbGc..."
-        tokenAlert.accessoryView = tokenTextField
-
-        guard tokenAlert.runModal() == .alertFirstButtonReturn, !tokenTextField.stringValue.isEmpty else {
-            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "No token provided"])
+        // Race the callback task against timeout
+        let (token, expiresAt): (String, Date)
+        do {
+            (token, expiresAt) = try await callbackTask.value
+            timeoutTask.cancel()
+        } catch {
+            timeoutTask.cancel()
+            throw error
         }
-
-        let token = tokenTextField.stringValue
-
-        // Try to extract expiresAt from the URL or use default (6 months)
-        let sixMonthsInSeconds: TimeInterval = 6 * 30 * 24 * 60 * 60
-        let expiresAt = Date().addingTimeInterval(sixMonthsInSeconds)
 
         config.saveToken(token, expiry: expiresAt, for: config.serverURL)
         print("[UPLOAD] ✓ Token obtained and saved (expires \(expiresAt))")
