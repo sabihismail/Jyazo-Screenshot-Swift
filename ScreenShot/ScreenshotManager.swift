@@ -7,14 +7,15 @@ class ScreenshotManager {
 
     private var overlayController: OverlayWindowController?
     private var currentConfig: AppConfig?
+    private var hasRequestedPermission = false
 
     func startCapture(config: AppConfig) {
         self.currentConfig = config
 
-        // Request permission if not granted, but proceed anyway
-        // The system will handle permission checks during capture
-        if !CGPreflightScreenCaptureAccess() {
+        // Request permission only once
+        if !CGPreflightScreenCaptureAccess() && !hasRequestedPermission {
             CGRequestScreenCaptureAccess()
+            hasRequestedPermission = true
         }
 
         // Show overlay regardless - permission will be validated during actual capture
