@@ -49,19 +49,43 @@ final class UploadManager: NSObject {
             throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL"])
         }
 
+        // Check if already authenticated (GET with no auto-redirect)
+        let checkURL = authURL
+        var checkRequest = URLRequest(url: checkURL)
+        checkRequest.httpMethod = "GET"
+        checkRequest.httpShouldHandleCookies = true
+
+        do {
+            let (_, checkResponse) = try await URLSession.shared.data(for: checkRequest)
+
+            if let httpResponse = checkResponse as? HTTPURLResponse {
+                if httpResponse.statusCode == 200 {
+                    print("[OAUTH] Already authenticated - skipping OAuth flow")
+                    return
+                } else if (300...399).contains(httpResponse.statusCode) {
+                    print("[OAUTH] Not authenticated - need to authenticate via OAuth")
+                } else {
+                    throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unexpected auth response: \(httpResponse.statusCode)"])
+                }
+            }
+        } catch {
+            print("[OAUTH] Auth check failed: \(error)")
+            throw error
+        }
+
         // Start listening for callback in background
         let callbackTask = Task {
             try await authServer.listenForCallback()
         }
 
         // Open browser for authentication
-        print("[UPLOAD] Opening browser for OAuth2: \(authURL)")
+        print("[OAUTH] Opening browser for OAuth: \(authURL)")
         NSWorkspace.shared.open(authURL)
 
-        // Wait for callback with timeout
+        // Wait for callback with 1 minute timeout (matching C# implementation)
         let timeoutTask = Task {
-            try await Task.sleep(nanoseconds: 300_000_000_000) // 5 minutes
-            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Authentication timeout"])
+            try await Task.sleep(nanoseconds: 60_000_000_000) // 1 minute
+            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Authentication timeout after 1 minute"])
         }
 
         // Race the callback task against timeout
@@ -75,7 +99,7 @@ final class UploadManager: NSObject {
         }
 
         config.saveToken(token, expiry: expiresAt, for: config.serverURL)
-        print("[UPLOAD] ✓ Token obtained and saved (expires \(expiresAt))")
+        print("[OAUTH] ✓ Token obtained and saved (expires \(expiresAt))")
     }
 
     private func uploadToServer(imageURL: URL, token: String, config: AppConfig) async throws -> String {
