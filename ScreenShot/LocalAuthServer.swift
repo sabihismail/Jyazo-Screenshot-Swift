@@ -1,6 +1,6 @@
 import Foundation
 
-actor LocalAuthServer {
+class LocalAuthServer {
     private let port: UInt16 = 52805
     private var serverSocket: Int32 = -1
     private var isRunning = false
