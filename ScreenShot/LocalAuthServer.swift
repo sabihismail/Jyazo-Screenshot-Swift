@@ -4,6 +4,7 @@ class LocalAuthServer {
     private let port: UInt16 = 52805
     private var serverSocket: Int32 = -1
     private var isRunning = false
+    private let readySignal = DispatchSemaphore(value: 0)
 
     func getAuthURL(for serverURL: String) -> URL? {
         let redirectUri = "http://127.0.0.1:\(port)/"
@@ -17,6 +18,13 @@ class LocalAuthServer {
         ]
 
         return components.url
+    }
+
+    func waitUntilReady(timeout: TimeInterval = 5) throws {
+        let result = readySignal.wait(timeout: .now() + timeout)
+        if result == .timedOut {
+            throw NSError(domain: "socket", code: -1, userInfo: [NSLocalizedDescriptionKey: "Socket failed to start listening"])
+        }
     }
 
     func listenForCallback() async throws -> (token: String, expiresAt: Date) {
@@ -65,6 +73,10 @@ class LocalAuthServer {
         guard Darwin.listen(socket, 1) >= 0 else {
             throw NSError(domain: "listen", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to listen on socket"])
         }
+
+        // Signal that socket is ready
+        print("[AUTH] ✓ Socket listening, ready for connections")
+        readySignal.signal()
 
         // Accept connection
         var clientAddr = sockaddr_in()
