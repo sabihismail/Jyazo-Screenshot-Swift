@@ -50,16 +50,20 @@ final class UploadManager: NSObject {
         }
 
         // Note: When sending ?redirect_uri, server always responds with 3xx redirect
-        // (either to Google OAuth or directly to oauth-callback if already authenticated)
-        // We don't handle the redirect here - just proceed with OAuth flow
-        // The browser will handle the redirect chain automatically
+        // The browser will handle the redirect chain and eventually hit our localhost listener
 
-        // Start listening for callback in background
+        // Start listening for callback (this must happen BEFORE opening browser)
+        print("[OAUTH] Starting OAuth2 listener on localhost:\(52805)")
+
         let callbackTask = Task {
             try await authServer.listenForCallback()
         }
 
-        // Open browser for authentication
+        // Give the socket a moment to start listening before opening browser
+        // This prevents race condition where browser redirects before we're ready
+        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+
+        // NOW open browser for authentication (socket is ready)
         print("[OAUTH] Opening browser for OAuth: \(authURL)")
         NSWorkspace.shared.open(authURL)
 
