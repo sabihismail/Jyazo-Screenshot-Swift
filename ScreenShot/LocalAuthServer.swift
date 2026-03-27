@@ -20,16 +20,23 @@ class LocalAuthServer {
         return components.url
     }
 
-    func waitUntilReady(timeout: TimeInterval = 5) throws {
+    func waitUntilReady(timeout: TimeInterval = 10) throws {
+        print("[AUTH] Waiting for socket to be ready (timeout: \(timeout)s)")
         let result = readySignal.wait(timeout: .now() + timeout)
         if result == .timedOut {
-            throw NSError(domain: "socket", code: -1, userInfo: [NSLocalizedDescriptionKey: "Socket failed to start listening"])
+            throw NSError(domain: "socket", code: -1, userInfo: [NSLocalizedDescriptionKey: "Socket failed to start listening within \(timeout)s"])
         }
+        print("[AUTH] Socket is ready")
     }
 
     func listenForCallback() async throws -> (token: String, expiresAt: Date) {
         return try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global().async {
+            DispatchQueue.global().async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(throwing: NSError(domain: "socket", code: -1, userInfo: [NSLocalizedDescriptionKey: "Server deallocated"]))
+                    return
+                }
+
                 do {
                     let result = try self.startListening()
                     continuation.resume(returning: result)

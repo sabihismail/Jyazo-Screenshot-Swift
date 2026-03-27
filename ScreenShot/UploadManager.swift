@@ -59,8 +59,9 @@ final class UploadManager: NSObject {
             try await authServer.listenForCallback()
         }
 
-        // Wait for socket to actually start listening (prevents race condition)
-        try authServer.waitUntilReady()
+        // Small delay to let background queue start, then wait for socket to be ready
+        try await Task.sleep(nanoseconds: 50_000_000) // 50ms for queue to dispatch
+        try authServer.waitUntilReady(timeout: 10)
 
         // NOW open browser for authentication (socket is ready)
         print("[OAUTH] Opening browser for OAuth")
