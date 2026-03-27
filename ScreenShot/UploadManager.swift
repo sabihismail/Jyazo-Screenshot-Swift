@@ -64,13 +64,9 @@ final class UploadManager: NSObject {
 
         // NOW open browser for authentication (socket is ready)
         print("[OAUTH] Opening browser for OAuth")
-        print("[OAUTH] URL: \(authURL?.absoluteString ?? "NIL")")
+        print("[OAUTH] URL: \(authURL.absoluteString)")
 
-        guard let url = authURL else {
-            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to construct auth URL"])
-        }
-
-        let success = NSWorkspace.shared.open(url)
+        let success = NSWorkspace.shared.open(authURL)
         if !success {
             print("[OAUTH] ✗ Failed to open URL in browser")
             throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to open browser"])
