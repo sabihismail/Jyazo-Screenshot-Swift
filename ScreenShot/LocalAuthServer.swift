@@ -21,12 +21,12 @@ class LocalAuthServer {
     }
 
     func waitUntilReady(timeout: TimeInterval = 10) throws {
-        print("[AUTH] Waiting for socket to be ready (timeout: \(timeout)s)")
+        AppLogger.shared.log("[AUTH] Waiting for socket to be ready (timeout: \(timeout)s)")
         let result = readySignal.wait(timeout: .now() + timeout)
         if result == .timedOut {
             throw NSError(domain: "socket", code: -1, userInfo: [NSLocalizedDescriptionKey: "Socket failed to start listening within \(timeout)s"])
         }
-        print("[AUTH] Socket is ready")
+        AppLogger.shared.log("[AUTH] Socket is ready")
     }
 
     func listenForCallback() async throws -> (token: String, expiresAt: Date) {
@@ -48,7 +48,7 @@ class LocalAuthServer {
     }
 
     private func startListening() throws -> (token: String, expiresAt: Date) {
-        print("[AUTH] Listening for callback on localhost:\(port)")
+        AppLogger.shared.log("[AUTH] Listening for callback on localhost:\(port)")
 
         // Create socket
         let socket = Darwin.socket(AF_INET, SOCK_STREAM, 0)
@@ -82,10 +82,11 @@ class LocalAuthServer {
         }
 
         // Signal that socket is ready
-        print("[AUTH] ✓ Socket listening, ready for connections")
+        AppLogger.shared.log("[AUTH] ✓ Socket listening, ready for connections")
         readySignal.signal()
 
         // Accept connection
+        AppLogger.shared.log("[AUTH] Waiting for incoming connection...")
         var clientAddr = sockaddr_in()
         var clientAddrLen = socklen_t(MemoryLayout<sockaddr_in>.size)
 
@@ -97,18 +98,21 @@ class LocalAuthServer {
             throw NSError(domain: "accept", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to accept connection"])
         }
 
+        AppLogger.shared.log("[AUTH] ✓ Connection accepted")
         defer { Darwin.close(client) }
 
         // Read request
         var buffer = [UInt8](repeating: 0, count: 2048)
+        AppLogger.shared.log("[AUTH] Reading from socket...")
         let bytesRead = Darwin.read(client, &buffer, buffer.count)
+        AppLogger.shared.log("[AUTH] Read \(bytesRead) bytes from socket")
 
         guard bytesRead > 0 else {
             throw NSError(domain: "read", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to read from socket"])
         }
 
         let request = String(bytes: buffer[0..<bytesRead], encoding: .utf8) ?? ""
-        print("[AUTH] Received callback request")
+        AppLogger.shared.log("[AUTH] Received callback request: \(request.prefix(200))")
 
         // Parse request line to extract path
         let lines = request.split(separator: "\n")
@@ -140,7 +144,7 @@ class LocalAuthServer {
         Darwin.write(client, response, response.count)
 
         let expiresAt = Date(timeIntervalSince1970: expiresAtInterval)
-        print("[AUTH] Token received, expires: \(expiresAt)")
+        AppLogger.shared.log("[AUTH] Token received, expires: \(expiresAt)")
 
         return (token: token, expiresAt: expiresAt)
     }

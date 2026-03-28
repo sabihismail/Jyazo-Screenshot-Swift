@@ -18,24 +18,24 @@ final class UploadManager: NSObject {
     func upload(imageURL: URL, config: AppConfig) async throws -> String {
         guard !config.serverURL.isEmpty else {
             // No server configured, just keep clipboard copy
-            print("[UPLOAD] No server configured, skipping upload")
+            AppLogger.shared.log("[UPLOAD] No server configured, skipping upload")
             return ""
         }
 
         // Check if token exists and is not expired
         if config.token(for: config.serverURL) == nil || config.isTokenExpired(for: config.serverURL) {
-            print("[UPLOAD] Token missing or expired, starting OAuth2 flow")
+            AppLogger.shared.log("[UPLOAD] Token missing or expired, starting OAuth2 flow")
             do {
                 try await authenticateOAuth2(config: config)
             } catch {
-                print("[UPLOAD] OAuth2 authentication failed: \(error)")
+                AppLogger.shared.log("[UPLOAD] OAuth2 authentication failed: \(error)")
                 return ""
             }
         }
 
         // Upload the file
         guard let token = config.token(for: config.serverURL) else {
-            print("[UPLOAD] Still no token after authentication")
+            AppLogger.shared.log("[UPLOAD] Still no token after authentication")
             return ""
         }
 
@@ -53,7 +53,7 @@ final class UploadManager: NSObject {
         // The browser will handle the redirect chain and eventually hit our localhost listener
 
         // Start listening for callback (this must happen BEFORE opening browser)
-        print("[OAUTH] Starting OAuth2 listener on localhost:52805")
+        AppLogger.shared.log("[OAUTH] Starting OAuth2 listener on localhost:52805")
 
         let callbackTask = Task {
             try await authServer.listenForCallback()
@@ -64,15 +64,20 @@ final class UploadManager: NSObject {
         try authServer.waitUntilReady(timeout: 10)
 
         // NOW open browser for authentication (socket is ready)
-        print("[OAUTH] Opening browser for OAuth")
-        print("[OAUTH] URL: \(authURL.absoluteString)")
+        AppLogger.shared.log("[OAUTH] Opening Chrome for OAuth")
+        AppLogger.shared.log("[OAUTH] URL: \(authURL.absoluteString)")
 
-        let success = NSWorkspace.shared.open(authURL)
+        let chromeBundleID = "com.google.Chrome"
+        var identifiers: NSArray?
+        let success = NSWorkspace.shared.open([authURL], withAppBundleIdentifier: chromeBundleID, options: [], additionalEventParamDescriptor: nil, launchIdentifiers: &identifiers)
         if !success {
-            print("[OAUTH] ✗ Failed to open URL in browser")
-            throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to open browser"])
+            AppLogger.shared.log("[OAUTH] ✗ Failed to open URL in Chrome, trying default browser")
+            let fallback = NSWorkspace.shared.open(authURL)
+            if !fallback {
+                throw NSError(domain: "OAuth2", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to open browser"])
+            }
         }
-        print("[OAUTH] ✓ Browser opened")
+        AppLogger.shared.log("[OAUTH] ✓ Browser opened")
 
         // Wait for callback with 1 minute timeout (matching C# implementation)
         let timeoutTask = Task {
@@ -91,7 +96,7 @@ final class UploadManager: NSObject {
         }
 
         config.saveToken(token, expiry: expiresAt, for: config.serverURL)
-        print("[OAUTH] ✓ Token obtained and saved (expires \(expiresAt))")
+        AppLogger.shared.log("[OAUTH] ✓ Token obtained and saved (expires \(expiresAt))")
     }
 
     private func uploadToServer(imageURL: URL, token: String, config: AppConfig) async throws -> String {
@@ -105,9 +110,13 @@ final class UploadManager: NSObject {
         // Build multipart body
         var body = Data()
 
-        // Add title field (empty)
+        // Add title field (from active window)
+        let windowTitle = WindowMonitor.shared.getCurrentWindowTitle()
+        AppLogger.shared.log("[UPLOAD] Window title: \(windowTitle.isEmpty ? "(empty)" : windowTitle)")
+
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"title\"\r\n\r\n".data(using: .utf8)!)
+        body.append((windowTitle).data(using: .utf8) ?? Data())
         body.append("\r\n".data(using: .utf8)!)
 
         // Add image field
@@ -134,7 +143,7 @@ final class UploadManager: NSObject {
         let serverResponse = try decoder.decode(ServerResponse.self, from: data)
 
         if serverResponse.success, let outputURL = serverResponse.output {
-            print("[UPLOAD] ✓ Upload successful!")
+            AppLogger.shared.log("[UPLOAD] ✓ Upload successful!")
 
             // Copy to clipboard
             NSPasteboard.general.clearContents()
@@ -148,7 +157,7 @@ final class UploadManager: NSObject {
             return outputURL
         } else {
             let errorMsg = serverResponse.error ?? "Unknown error"
-            print("[UPLOAD] ✗ Upload failed: \(errorMsg)")
+            AppLogger.shared.log("[UPLOAD] ✗ Upload failed: \(errorMsg)")
             throw NSError(domain: "Upload", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
     }

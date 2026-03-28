@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import ScreenCaptureKit
 
 class PreferencesWindowManager {
     static let shared = PreferencesWindowManager()
@@ -59,8 +60,21 @@ struct MenuView: View {
         }
         .keyboardShortcut(",", modifiers: [.command])
 
-        Button("Clear Token") {
-            config.deleteToken(for: config.serverURL)
+        Button("Request Permissions (Screen, Audio, Accessibility)") {
+            WindowMonitor.shared.requestAllPermissions()
+        }
+
+        Divider()
+
+        // Show log button based on log file count
+        if AppLogger.shared.getLogFileCount() <= 1 {
+            Button("Open Logs") {
+                AppLogger.shared.showLogDirectory()
+            }
+        } else {
+            Button("Open Latest Log") {
+                AppLogger.shared.openLogFile()
+            }
         }
 
         Divider()

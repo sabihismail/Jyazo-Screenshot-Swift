@@ -55,6 +55,7 @@
 				0FC5689E2F5CD39D00053D75 /* Sources */,
 				0FC5689F2F5CD39D00053D75 /* Frameworks */,
 				0FC568A02F5CD39D00053D75 /* Resources */,
+				0FC568B12F5CD39E00053D75 /* Reset Permissions */,
 			);
 			buildRules = (
 			);
@@ -123,6 +124,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+	0FC568B12F5CD39E00053D75 /* Reset Permissions */ = {
+		isa = PBXShellScriptBuildPhase;
+		alwaysOutOfDate = 1;
+		buildActionMask = 2147483647;
+		files = (
+		);
+		inputFileListPaths = (
+		);
+		inputPaths = (
+		);
+		outputFileListPaths = (
+		);
+		outputPaths = (
+		);
+		runOnlyForDeploymentPostprocessing = 0;
+		shellPath = /bin/bash;
+		shellScript = "echo \"[BUILD] Resetting TCC permissions...\"\ntccutil reset ScreenCapture arkaprime.ScreenShot 2>/dev/null && echo \"✓ Reset Screen Recording permission\" || echo \"✗ Failed to reset Screen Recording\"\ntccutil reset SystemAudioRecording arkaprime.ScreenShot 2>/dev/null && echo \"✓ Reset System Audio Recording permission\" || echo \"✗ Failed to reset System Audio Recording\"\ntccutil reset Accessibility arkaprime.ScreenShot 2>/dev/null && echo \"✓ Reset Accessibility permission\" || echo \"✗ Failed to reset Accessibility\"\necho \"[BUILD] Permission reset complete\"\n";
+	};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
 		0FC568AB2F5CD39E00053D75 /* Debug */ = {

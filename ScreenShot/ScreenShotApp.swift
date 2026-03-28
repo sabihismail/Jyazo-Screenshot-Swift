@@ -15,6 +15,15 @@ struct ScreenShotApp: App {
     }
 
     init() {
+        // Request permissions at startup
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            WindowMonitor.shared.requestAllPermissions()
+        }
+
+        // Start window monitoring to track active window title
+        WindowMonitor.shared.start()
+        AppLogger.shared.log("[APP] Window monitoring initialized")
+
         // Initialize hotkey manager with a slight delay to ensure state is ready
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let appConfig = AppConfig()

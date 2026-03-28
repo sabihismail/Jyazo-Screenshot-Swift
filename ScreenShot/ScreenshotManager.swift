@@ -40,15 +40,25 @@ class ScreenshotManager {
 
                 // Upload to server
                 if let config = currentConfig {
+                    let uploadURL: URL?
                     if let url = savedURL {
-                        _ = try await UploadManager.shared.upload(imageURL: url, config: config)
+                        uploadURL = try await UploadManager.shared.upload(imageURL: url, config: config).isEmpty ? nil : URL(string: try await UploadManager.shared.upload(imageURL: url, config: config))
                     } else {
                         // If not saved to disk, save to temp and upload
                         let tempURL = saveToDisk(image: image, directory: NSTemporaryDirectory())
                         if let tempURL = tempURL {
-                            _ = try await UploadManager.shared.upload(imageURL: tempURL, config: config)
+                            let resultURL = try await UploadManager.shared.upload(imageURL: tempURL, config: config)
+                            uploadURL = resultURL.isEmpty ? nil : URL(string: resultURL)
                             try? FileManager.default.removeItem(at: tempURL)
+                        } else {
+                            uploadURL = nil
                         }
+                    }
+
+                    // Open the result URL in default browser
+                    if let uploadURL = uploadURL {
+                        AppLogger.shared.log("[CAPTURE] Opening URL in browser: \(uploadURL.absoluteString)")
+                        NSWorkspace.shared.open(uploadURL)
                     }
                 }
             } catch {
@@ -72,11 +82,11 @@ class ScreenshotManager {
             }
 
             try pngData.write(to: URL(fileURLWithPath: filePath), options: .atomic)
-            print("[CAPTURE] Saved to: \(filePath)")
+            AppLogger.shared.log("[CAPTURE] Saved to: \(filePath)")
 
             return URL(fileURLWithPath: filePath)
         } catch {
-            print("[CAPTURE] Failed to save: \(error)")
+            AppLogger.shared.log("[CAPTURE] Failed to save: \(error)")
             return nil
         }
     }

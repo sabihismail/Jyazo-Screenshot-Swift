@@ -55,6 +55,9 @@ final class AppConfig {
         didSet { UserDefaults.standard.set(gifFrameRate, forKey: "gifFrameRate") }
     }
 
+    // MARK: - Window Title Tracking
+    var currentWindowTitle: String = ""
+
     init() {
         let defaults = UserDefaults.standard
 
@@ -145,7 +148,7 @@ final class AppConfig {
         let expiryKey = "tokenExpiry_\(baseURL)"
         UserDefaults.standard.removeObject(forKey: expiryKey)
 
-        print("[AUTH] Deleted token for \(baseURL)")
+        AppLogger.shared.log("[AUTH] Deleted token for \(baseURL)")
     }
 
     private func extractBaseURL(_ urlString: String) -> String {
@@ -153,5 +156,41 @@ final class AppConfig {
             return urlString
         }
         return "\(url.scheme ?? "http")://\(url.host ?? "")"
+    }
+
+    // MARK: - TCC Permissions Reset
+    func resetScreenRecordingPermission() {
+        let bundleID = "arkaprime.ScreenShot"
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        process.arguments = ["reset", "ScreenCapture", bundleID]
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            AppLogger.shared.log("[PERMISSIONS] ✓ Reset screen recording permission for \(bundleID)")
+        } catch {
+            AppLogger.shared.log("[PERMISSIONS] ✗ Failed to reset screen recording: \(error)")
+        }
+    }
+
+    func resetSystemAudioPermission() {
+        let bundleID = "arkaprime.ScreenShot"
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        process.arguments = ["reset", "SystemAudioRecording", bundleID]
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            AppLogger.shared.log("[PERMISSIONS] ✓ Reset system audio permission for \(bundleID)")
+        } catch {
+            AppLogger.shared.log("[PERMISSIONS] ✗ Failed to reset system audio: \(error)")
+        }
+    }
+
+    func resetAllPermissions() {
+        resetScreenRecordingPermission()
+        resetSystemAudioPermission()
     }
 }
