@@ -8,10 +8,8 @@ struct ScreenShotApp: App {
         MenuBarExtra(content: {
             MenuView(config: config)
         }, label: {
-            Image("AppIcon")
+            Image("MenuBarIcon")
                 .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
         })
 
         Settings {
