@@ -62,13 +62,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0FC568A42F5CD39D00053D75 /* ScreenShot */,
+				0FC568A42F5CD39D00053D75 /* Jyazo */,
 			);
-			name = ScreenShot;
+			name = Jyazo;
 			packageProductDependencies = (
 			);
-			productName = ScreenShot;
-			productReference = 0FC568A22F5CD39D00053D75 /* ScreenShot.app */;
+			productName = Jyazo;
+			productReference = 0FC568A22F5CD39D00053D75 /* Jyazo.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

@@ -11,7 +11,7 @@
 
 ### Automatic Build & Run Command
 ```bash
-/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme ScreenShot -configuration Debug build 2>&1 | grep "BUILD" && \
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme Jyazo -configuration Debug build 2>&1 | grep "BUILD" && \
 killall ScreenShot 2>/dev/null; sleep 1; open /Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products/Debug/ScreenShot.app
 ```
 
@@ -19,7 +19,7 @@ killall ScreenShot 2>/dev/null; sleep 1; open /Users/zeen/Library/Developer/Xcod
 
 #### 1. Build the App
 ```bash
-/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme ScreenShot -configuration Debug build
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme Jyazo -configuration Debug build
 ```
 
 #### 2. Reset Permissions (TCC Database)
@@ -63,7 +63,7 @@ open /Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products
 
 Build + reset + open in Xcode with logs:
 ```bash
-/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme ScreenShot -configuration Debug build && \
+/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme Jyazo -configuration Debug build && \
 tccutil reset ScreenCapture arkaprime.ScreenShot && \
 tccutil reset SystemAudioRecording arkaprime.ScreenShot && \
 open -a Xcode /Users/zeen/Repos/ScreenShot/ScreenShot.xcodeproj
