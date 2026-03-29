@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 @main
 struct ScreenShotApp: App {
@@ -8,7 +9,7 @@ struct ScreenShotApp: App {
         MenuBarExtra(content: {
             MenuView(config: config)
         }, label: {
-            Image("MenuBarIcon")
+            menuBarIcon()
         })
 
         Settings {
@@ -30,6 +31,24 @@ struct ScreenShotApp: App {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let appConfig = AppConfig()
             HotkeyManager.shared.start(config: appConfig)
+        }
+    }
+
+    private func menuBarIcon() -> some View {
+        if let nsImage = NSImage(named: "MenuBarIcon") {
+            // Resize to menu bar standard size (18pt height)
+            let resizedImage = NSImage(size: NSSize(width: 18, height: 18))
+            resizedImage.lockFocus()
+            nsImage.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18),
+                        from: NSRect.zero,
+                        operation: .sourceOver,
+                        fraction: 1.0)
+            resizedImage.unlockFocus()
+            resizedImage.isTemplate = true
+            return Image(nsImage: resizedImage)
+        } else {
+            // Fallback to system icon
+            return Image(systemName: "camera.fill")
         }
     }
 }
