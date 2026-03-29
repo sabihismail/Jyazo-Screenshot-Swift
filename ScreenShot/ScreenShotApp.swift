@@ -5,9 +5,14 @@ struct ScreenShotApp: App {
     @State private var config = AppConfig()
 
     var body: some Scene {
-        MenuBarExtra("ScreenShot", systemImage: "camera.viewfinder") {
+        MenuBarExtra(content: {
             MenuView(config: config)
-        }
+        }, label: {
+            Image("AppIcon")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+        })
 
         Settings {
             PreferencesView(config: config)

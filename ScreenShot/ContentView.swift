@@ -60,10 +60,6 @@ struct MenuView: View {
         }
         .keyboardShortcut(",", modifiers: [.command])
 
-        Button("Request Permissions (Screen, Audio, Accessibility)") {
-            WindowMonitor.shared.requestAllPermissions()
-        }
-
         Divider()
 
         // Show log button based on log file count
