@@ -1,0 +1,29 @@
+# Xcode
+*.xcodeproj/**
+DerivedData/
+build/
+*.pbxuser
+*.xcworkspace/
+xcuserdata/
+*.xcconfig
+
+# Build artifacts
+.DS_Store
+*.swiftpm/
+
+# Release builds (keep releases/ directory but ignore built artifacts)
+releases/*.app/
+releases/*.dmg
+!releases/README.md
+
+# Dependencies
+.package.resolved
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
+*.pem
