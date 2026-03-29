@@ -113,6 +113,13 @@ class WindowMonitor {
 
         let appName = frontmostApp.localizedName ?? "Unknown"
         let pid = frontmostApp.processIdentifier
+
+        // Skip updating title if Jyazo itself is active (preserve capture title during screenshot)
+        if frontmostApp.bundleIdentifier == "arkaprime.Jyazo" {
+            AppLogger.shared.log("[WINDOW] [POLL] Jyazo app active - skipping title update to preserve capture title")
+            return
+        }
+
         AppLogger.shared.log("[WINDOW] [POLL] Frontmost app: \(appName) (PID: \(pid))")
 
         let appElement = AXUIElementCreateApplication(pid)
