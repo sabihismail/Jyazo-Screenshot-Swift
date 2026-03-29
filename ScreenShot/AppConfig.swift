@@ -160,7 +160,7 @@ final class AppConfig {
 
     // MARK: - TCC Permissions Reset
     func resetScreenRecordingPermission() {
-        let bundleID = "arkaprime.ScreenShot"
+        let bundleID = "arkaprime.Jyazo"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
         process.arguments = ["reset", "ScreenCapture", bundleID]
@@ -175,7 +175,7 @@ final class AppConfig {
     }
 
     func resetSystemAudioPermission() {
-        let bundleID = "arkaprime.ScreenShot"
+        let bundleID = "arkaprime.Jyazo"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
         process.arguments = ["reset", "SystemAudioRecording", bundleID]

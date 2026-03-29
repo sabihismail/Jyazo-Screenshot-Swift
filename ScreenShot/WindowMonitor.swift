@@ -76,7 +76,7 @@ class WindowMonitor {
                 AppLogger.shared.log("[WINDOW] [NOTIFY] App activated: \(appName)")
 
                 // Skip if ScreenShot app itself became active (don't override window title during capture)
-                if app.bundleIdentifier == "arkaprime.ScreenShot" {
+                if app.bundleIdentifier == "arkaprime.Jyazo" {
                     AppLogger.shared.log("[WINDOW] [NOTIFY] → Skipping (ScreenShot app, preserving capture title)")
                     return
                 }

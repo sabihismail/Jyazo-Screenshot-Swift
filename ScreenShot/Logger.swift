@@ -24,7 +24,7 @@ class AppLogger {
         // Write header
         write("=== ScreenShot App Started ===")
         write("Time: \(Date())")
-        write("Bundle: arkaprime.ScreenShot\n")
+        write("Bundle: arkaprime.Jyazo\n")
     }
 
     func log(_ message: String) {

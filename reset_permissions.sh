@@ -1,6 +1,6 @@
 #!/bin/bash
 # Reset ScreenShot app permissions after build
-BUNDLE_ID="arkaprime.ScreenShot"
+BUNDLE_ID="arkaprime.Jyazo"
 
 echo "[BUILD] Resetting TCC permissions for $BUNDLE_ID..."
 
