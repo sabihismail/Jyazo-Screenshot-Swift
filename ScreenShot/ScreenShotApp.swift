@@ -9,7 +9,6 @@ struct ScreenShotApp: App {
             MenuView(config: config)
         }, label: {
             Image("MenuBarIcon")
-                .renderingMode(.template)
         })
 
         Settings {
