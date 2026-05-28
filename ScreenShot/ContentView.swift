@@ -60,6 +60,12 @@ struct MenuView: View {
         }
         .keyboardShortcut(",", modifiers: [.command])
 
+        Button("Permissions…") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                PermissionsWindowManager.shared.show()
+            }
+        }
+
         Divider()
 
         // Show log button based on log file count

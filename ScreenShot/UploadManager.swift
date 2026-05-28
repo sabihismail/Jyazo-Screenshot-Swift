@@ -2,7 +2,7 @@ import Foundation
 import AuthenticationServices
 
 struct ServerResponse: Decodable {
-    let success: Bool
+    let success: Bool?
     let output: String?
     let error: String?
 
@@ -39,7 +39,24 @@ final class UploadManager: NSObject {
             return ""
         }
 
-        return try await uploadToServer(imageURL: imageURL, token: token, config: config)
+        do {
+            return try await uploadToServer(imageURL: imageURL, token: token, config: config)
+        } catch let error as NSError where error.domain == "Upload" && error.code == 401 {
+            // Server rejected token (e.g. JWE expired server-side); clear and re-auth once
+            AppLogger.shared.log("[UPLOAD] Server returned 401, clearing token and re-authenticating")
+            config.deleteToken(for: config.serverURL)
+            do {
+                try await authenticateOAuth2(config: config)
+            } catch {
+                AppLogger.shared.log("[UPLOAD] Re-authentication failed: \(error)")
+                return ""
+            }
+            guard let freshToken = config.token(for: config.serverURL) else {
+                AppLogger.shared.log("[UPLOAD] Still no token after re-authentication")
+                return ""
+            }
+            return try await uploadToServer(imageURL: imageURL, token: freshToken, config: config)
+        }
     }
 
     private func authenticateOAuth2(config: AppConfig) async throws {
@@ -100,7 +117,13 @@ final class UploadManager: NSObject {
     }
 
     private func uploadToServer(imageURL: URL, token: String, config: AppConfig) async throws -> String {
-        var request = URLRequest(url: URL(string: "\(config.serverURL)/api/ss/uploadScreenShot")!)
+        let rawURL = "\(config.serverURL)/api/ss/uploadScreenShot"
+        AppLogger.shared.log("[UPLOAD] Target URL: '\(rawURL)'")
+        guard let url = URL(string: rawURL.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            AppLogger.shared.log("[UPLOAD] ✗ Invalid server URL: '\(rawURL)'")
+            throw NSError(domain: "Upload", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid server URL: \(rawURL)"])
+        }
+        var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
@@ -130,19 +153,25 @@ final class UploadManager: NSObject {
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         request.httpBody = body
+        request.timeoutInterval = 15
 
+        AppLogger.shared.log("[UPLOAD] Sending request to \(config.serverURL)/api/ss/uploadScreenShot (\(body.count) bytes)")
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NSError(domain: "Upload", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
         }
 
-        print("[UPLOAD] Response status: \(httpResponse.statusCode)")
+        AppLogger.shared.log("[UPLOAD] Response status: \(httpResponse.statusCode)")
+
+        if httpResponse.statusCode == 401 {
+            throw NSError(domain: "Upload", code: 401, userInfo: [NSLocalizedDescriptionKey: "Unauthorized"])
+        }
 
         let decoder = JSONDecoder()
         let serverResponse = try decoder.decode(ServerResponse.self, from: data)
 
-        if serverResponse.success, let outputURL = serverResponse.output {
+        if serverResponse.success == true, let outputURL = serverResponse.output {
             AppLogger.shared.log("[UPLOAD] ✓ Upload successful!")
 
             // Copy to clipboard

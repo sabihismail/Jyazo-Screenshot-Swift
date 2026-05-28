@@ -40,29 +40,26 @@ class ScreenshotManager {
 
                 // Upload to server
                 if let config = currentConfig {
-                    let uploadURL: URL?
+                    let resultString: String
                     if let url = savedURL {
-                        uploadURL = try await UploadManager.shared.upload(imageURL: url, config: config).isEmpty ? nil : URL(string: try await UploadManager.shared.upload(imageURL: url, config: config))
+                        resultString = try await UploadManager.shared.upload(imageURL: url, config: config)
                     } else {
-                        // If not saved to disk, save to temp and upload
                         let tempURL = saveToDisk(image: image, directory: NSTemporaryDirectory())
                         if let tempURL = tempURL {
-                            let resultURL = try await UploadManager.shared.upload(imageURL: tempURL, config: config)
-                            uploadURL = resultURL.isEmpty ? nil : URL(string: resultURL)
+                            resultString = try await UploadManager.shared.upload(imageURL: tempURL, config: config)
                             try? FileManager.default.removeItem(at: tempURL)
                         } else {
-                            uploadURL = nil
+                            resultString = ""
                         }
                     }
 
-                    // Open the result URL in default browser
-                    if let uploadURL = uploadURL {
+                    if !resultString.isEmpty, let uploadURL = URL(string: resultString) {
                         AppLogger.shared.log("[CAPTURE] Opening URL in browser: \(uploadURL.absoluteString)")
                         NSWorkspace.shared.open(uploadURL)
                     }
                 }
             } catch {
-                print("Screenshot error: \(error)")
+                AppLogger.shared.log("[CAPTURE] Error: \(error)")
             }
         }
     }

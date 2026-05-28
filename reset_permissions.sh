@@ -11,13 +11,6 @@ else
     echo "✗ Failed to reset Screen Recording"
 fi
 
-# Reset System Audio Recording
-if tccutil reset SystemAudioRecording "$BUNDLE_ID" 2>/dev/null; then
-    echo "✓ Reset System Audio Recording permission"
-else
-    echo "✗ Failed to reset System Audio Recording"
-fi
-
 # Reset Accessibility
 if tccutil reset Accessibility "$BUNDLE_ID" 2>/dev/null; then
     echo "✓ Reset Accessibility permission"

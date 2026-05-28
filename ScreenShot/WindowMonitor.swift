@@ -24,11 +24,8 @@ class WindowMonitor {
         let axTrusted = AXIsProcessTrustedWithOptions(options)
         AppLogger.shared.log("[WINDOW] Accessibility: \(axTrusted ? "✓ Granted" : "✗ Denied")")
 
-        // Screen Recording and System Audio Recording prompts will appear when:
-        // - User clicks "Capture Region" (triggers Screen Recording permission)
-        // - User clicks "Record GIF" (triggers System Audio Recording permission)
+        // Screen Recording prompt will appear when user clicks "Capture Region"
         AppLogger.shared.log("[WINDOW] Screen Recording: will prompt on first screenshot")
-        AppLogger.shared.log("[WINDOW] System Audio Recording: will prompt on first GIF record")
 
         if axTrusted {
             // Restart monitoring since we now have Accessibility permission
@@ -134,6 +131,12 @@ class WindowMonitor {
             let titleResult = AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &title)
 
             if titleResult == .success, let titleStr = title as? String, !titleStr.isEmpty {
+                let serverURL = UserDefaults.standard.string(forKey: "serverURL") ?? ""
+                if !serverURL.isEmpty, let host = URL(string: serverURL)?.host,
+                   titleStr.contains(host) && (titleStr.contains("callbackUrl") || titleStr.contains("oauth-callback") || titleStr.contains("redirect_uri")) {
+                    AppLogger.shared.log("[WINDOW] [POLL] Skipping title (OAuth callback): \(titleStr)")
+                    return
+                }
                 AppLogger.shared.log("[WINDOW] [POLL] Window title retrieved: \(titleStr)")
                 currentWindowTitle = titleStr
             } else {

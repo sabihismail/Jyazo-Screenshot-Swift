@@ -18,9 +18,19 @@ struct ScreenShotApp: App {
     }
 
     init() {
-        // Request permissions at startup
+        // Show permissions window on launch if anything is missing
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            WindowMonitor.shared.requestAllPermissions()
+            PermissionsWindowManager.shared.showIfNeeded()
+        }
+
+        // Re-check when app regains focus (user may have just granted in System Settings)
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            PermissionsManager.shared.refresh()
+            PermissionsWindowManager.shared.bringToFrontIfVisible()
         }
 
         // Start window monitoring to track active window title

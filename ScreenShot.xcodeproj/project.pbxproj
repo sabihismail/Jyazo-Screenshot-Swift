@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		0FC568A22F5CD39D00053D75 /* ScreenShot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenShot.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0FC568A22F5CD39D00053D75 /* Jyazo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Jyazo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		0FC568A32F5CD39D00053D75 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0FC568A22F5CD39D00053D75 /* ScreenShot.app */,
+				0FC568A22F5CD39D00053D75 /* Jyazo.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0FC568A12F5CD39D00053D75 /* ScreenShot */ = {
+		0FC568A12F5CD39D00053D75 /* Jyazo */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0FC568AD2F5CD39E00053D75 /* Build configuration list for PBXNativeTarget "ScreenShot" */;
+			buildConfigurationList = 0FC568AD2F5CD39E00053D75 /* Build configuration list for PBXNativeTarget "Jyazo" */;
 			buildPhases = (
 				0FC5689E2F5CD39D00053D75 /* Sources */,
 				0FC5689F2F5CD39D00053D75 /* Frameworks */,
@@ -62,7 +62,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				0FC568A42F5CD39D00053D75 /* Jyazo */,
+				0FC568A42F5CD39D00053D75 /* ScreenShot */,
 			);
 			name = Jyazo;
 			packageProductDependencies = (
@@ -100,7 +100,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				0FC568A12F5CD39D00053D75 /* ScreenShot */,
+				0FC568A12F5CD39D00053D75 /* Jyazo */,
 			);
 		};
 /* End PBXProject section */
@@ -274,10 +274,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 9KL673P9CR;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -304,10 +306,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 9KL673P9CR;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -341,7 +345,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0FC568AD2F5CD39E00053D75 /* Build configuration list for PBXNativeTarget "ScreenShot" */ = {
+		0FC568AD2F5CD39E00053D75 /* Build configuration list for PBXNativeTarget "Jyazo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0FC568AE2F5CD39E00053D75 /* Debug */,

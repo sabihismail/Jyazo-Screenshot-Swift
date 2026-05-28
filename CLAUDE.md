@@ -12,7 +12,7 @@
 ### Automatic Build & Run Command
 ```bash
 /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme Jyazo -configuration Debug build 2>&1 | grep "BUILD" && \
-killall ScreenShot 2>/dev/null; sleep 1; open /Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products/Debug/ScreenShot.app
+killall ScreenShot 2>/dev/null; sleep 1; open /Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products/Debug/Jyazo.app
 ```
 
 ### Manual Testing (if needed)
@@ -24,8 +24,8 @@ killall ScreenShot 2>/dev/null; sleep 1; open /Users/zeen/Library/Developer/Xcod
 
 #### 2. Reset Permissions (TCC Database)
 ```bash
-tccutil reset ScreenCapture arkaprime.ScreenShot
-tccutil reset SystemAudioRecording arkaprime.ScreenShot
+tccutil reset ScreenCapture arkaprime.Jyazo
+tccutil reset Accessibility arkaprime.Jyazo
 ```
 
 #### 3. Open App with Debug Logs
@@ -42,7 +42,7 @@ tccutil reset SystemAudioRecording arkaprime.ScreenShot
 log stream --predicate 'process == "ScreenShot"' --level debug
 
 # Terminal 2: Open the app
-open /Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products/Debug/ScreenShot.app
+open /Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products/Debug/Jyazo.app
 ```
 
 **Option C: Via macOS Console.app**
@@ -64,8 +64,8 @@ open /Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products
 Build + reset + open in Xcode with logs:
 ```bash
 /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme Jyazo -configuration Debug build && \
-tccutil reset ScreenCapture arkaprime.ScreenShot && \
-tccutil reset SystemAudioRecording arkaprime.ScreenShot && \
+tccutil reset ScreenCapture arkaprime.Jyazo && \
+tccutil reset Accessibility arkaprime.Jyazo && \
 open -a Xcode /Users/zeen/Repos/ScreenShot/ScreenShot.xcodeproj
 ```
 
@@ -73,8 +73,8 @@ Then press ⌘R in Xcode to run and see live logs.
 
 ## Bundle Information
 
-- **Bundle ID**: `arkaprime.ScreenShot`
-- **Build Output**: `/Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products/Debug/ScreenShot.app`
+- **Bundle ID**: `arkaprime.Jyazo`
+- **Build Output**: `/Users/zeen/Library/Developer/Xcode/DerivedData/ScreenShot-*/Build/Products/Debug/Jyazo.app`
 
 ## Resetting Permissions
 
@@ -88,23 +88,19 @@ Then press ⌘R in Xcode to run and see live logs.
 ```bash
 bash /Users/zeen/Repos/ScreenShot/clear_permissions.sh
 ```
-This clears ALL TCC permissions (Accessibility, Screen Recording, System Audio). You'll be prompted for your sudo password.
+This clears ALL TCC permissions (Accessibility, Screen Recording). You'll be prompted for your sudo password.
 
 **Manual reset (if needed):**
 ```bash
 # Reset screen recording only
-tccutil reset ScreenCapture arkaprime.ScreenShot
-
-# Reset system audio only
-tccutil reset SystemAudioRecording arkaprime.ScreenShot
+tccutil reset ScreenCapture arkaprime.Jyazo
 
 # Reset accessibility only
-tccutil reset Accessibility arkaprime.ScreenShot
+tccutil reset Accessibility arkaprime.Jyazo
 
 # Reset all
-tccutil reset ScreenCapture arkaprime.ScreenShot && \
-tccutil reset SystemAudioRecording arkaprime.ScreenShot && \
-tccutil reset Accessibility arkaprime.ScreenShot
+tccutil reset ScreenCapture arkaprime.Jyazo && \
+tccutil reset Accessibility arkaprime.Jyazo
 ```
 
 ## Logging System
@@ -142,8 +138,8 @@ Watch for these in the logs:
 
 ### "Socket failed to start listening within 10.0s"
 - Port 52805 is already in use
-- Solution: Kill existing ScreenShot processes: `killall ScreenShot`
-- Or reset: `tccutil reset ScreenCapture arkaprime.ScreenShot && tccutil reset SystemAudioRecording arkaprime.ScreenShot`
+- Solution: Kill existing Jyazo processes: `killall Jyazo`
+- Or reset: `tccutil reset ScreenCapture arkaprime.Jyazo && tccutil reset Accessibility arkaprime.Jyazo`
 
 ### Permission Dialog Not Appearing After Reset
 - Use "Reset & Restart" button in app menu
