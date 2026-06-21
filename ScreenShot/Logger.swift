@@ -5,76 +5,72 @@ class AppLogger {
     static let shared = AppLogger()
 
     private let fileManager = FileManager.default
+    private let logsURL: URL
     private var logFileURL: URL
+    private var lineCount = 0
+    private let maxLinesPerFile = 1000
 
     init() {
-        // Create logs directory in Application Support
         let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let logsURL = appSupportURL.appendingPathComponent("ScreenShot/Logs", isDirectory: true)
-
-        // Create directory if needed
+        logsURL = appSupportURL.appendingPathComponent("ScreenShot/Logs", isDirectory: true)
         try? fileManager.createDirectory(at: logsURL, withIntermediateDirectories: true)
 
-        // Create log file with timestamp
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-        let timestamp = dateFormatter.string(from: Date())
-        logFileURL = logsURL.appendingPathComponent("ScreenShot_\(timestamp).log")
-
-        // Write header
-        write("=== ScreenShot App Started ===")
+        logFileURL = Self.newLogFileURL(in: logsURL)
+        write("=== Jyazo Started ===")
         write("Time: \(Date())")
         write("Bundle: arkaprime.Jyazo\n")
     }
 
     func log(_ message: String) {
-        // Print to console
         print(message)
-        // Write to file
         write(message)
     }
 
     private func write(_ message: String) {
-        let timestamped = "[\(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium))] \(message)\n"
-
-        if let data = timestamped.data(using: .utf8) {
-            if fileManager.fileExists(atPath: logFileURL.path) {
-                // Append to existing file
-                if let fileHandle = FileHandle(forWritingAtPath: logFileURL.path) {
-                    fileHandle.seekToEndOfFile()
-                    fileHandle.write(data)
-                    fileHandle.closeFile()
-                }
-            } else {
-                // Create new file
-                try? data.write(to: logFileURL)
-            }
+        if lineCount >= maxLinesPerFile {
+            rotate()
         }
+
+        let timestamped = "[\(DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium))] \(message)\n"
+        guard let data = timestamped.data(using: .utf8) else { return }
+
+        if fileManager.fileExists(atPath: logFileURL.path) {
+            if let fh = FileHandle(forWritingAtPath: logFileURL.path) {
+                fh.seekToEndOfFile()
+                fh.write(data)
+                fh.closeFile()
+            }
+        } else {
+            try? data.write(to: logFileURL)
+        }
+        lineCount += 1
     }
 
-    func getLogFilePath() -> String {
-        logFileURL.path
+    private func rotate() {
+        logFileURL = Self.newLogFileURL(in: logsURL)
+        lineCount = 0
+        // Write a continuation header so each part is self-contained
+        let header = "=== Log continued ===\nTime: \(Date())\n"
+        try? header.data(using: .utf8)?.write(to: logFileURL)
     }
+
+    private static func newLogFileURL(in directory: URL) -> URL {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        return directory.appendingPathComponent("Jyazo_\(fmt.string(from: Date())).log")
+    }
+
+    func getLogFilePath() -> String { logFileURL.path }
 
     func openLogFile() {
         NSWorkspace.shared.open(logFileURL)
     }
 
     func showLogDirectory() {
-        let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let logsURL = appSupportURL.appendingPathComponent("ScreenShot/Logs", isDirectory: true)
         NSWorkspace.shared.open(logsURL)
     }
 
     func getLogFileCount() -> Int {
-        let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let logsURL = appSupportURL.appendingPathComponent("ScreenShot/Logs", isDirectory: true)
-
-        do {
-            let files = try fileManager.contentsOfDirectory(atPath: logsURL.path)
-            return files.filter { $0.hasSuffix(".log") }.count
-        } catch {
-            return 0
-        }
+        (try? fileManager.contentsOfDirectory(atPath: logsURL.path))?.filter { $0.hasSuffix(".log") }.count ?? 0
     }
 }

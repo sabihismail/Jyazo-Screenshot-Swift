@@ -11,179 +11,333 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var stream: SCStream?
     private var frames: [CGImage] = []
     private var recordingRect: CGRect = .zero
-    private var isRecording = false
-    private var recordingWindow: NSWindow?
+    private(set) var isRecording = false
+    private(set) var isPaused = false
+    private var currentConfig: AppConfig?
+
+    private var borderPanel: NSPanel?
+    private var controlsPanel: NSPanel?
+
+    // MARK: - Public API
 
     func startRecording(rect: CGRect, config: AppConfig) {
+        guard !isRecording else { return }
         recordingRect = rect
+        currentConfig = config
         frames.removeAll()
         isRecording = true
+        isPaused = false
 
-        showRecordingHUD()
+        showRecordingOverlay(rect: rect)
 
         Task {
             do {
                 try await setupAndStartStream(rect: rect)
             } catch {
-                print("[GIF] Failed to start recording: \(error)")
+                AppLogger.shared.log("[GIF] Failed to start recording: \(error)")
                 isRecording = false
-                hideRecordingHUD()
+                hideRecordingOverlay()
             }
         }
     }
 
-    func stopRecording() async -> URL? {
+    func pauseRecording() {
+        guard isRecording, !isPaused else { return }
+        isPaused = true
+        AppLogger.shared.log("[GIF] Paused (\(frames.count) frames)")
+        (controlsPanel?.contentView as? RecordingControlsView)?.setIsPaused(true)
+    }
+
+    func resumeRecording() {
+        guard isRecording, isPaused else { return }
+        isPaused = false
+        AppLogger.shared.log("[GIF] Resumed")
+        (controlsPanel?.contentView as? RecordingControlsView)?.setIsPaused(false)
+    }
+
+    func cancelRecording() {
+        guard isRecording else { return }
         isRecording = false
-        hideRecordingHUD()
+        isPaused = false
+        hideRecordingOverlay()
+        Task {
+            await stopStream()
+            frames.removeAll()
+            AppLogger.shared.log("[GIF] Cancelled")
+        }
+    }
 
-        if let stream = stream {
-            do {
-                try stream.removeStreamOutput(self, type: .screen)
-            } catch {
-                print("[GIF] Error removing stream output: \(error)")
+    func finishRecording() {
+        guard isRecording else { return }
+        isRecording = false
+        isPaused = false
+        hideRecordingOverlay()
+
+        let capturedFrames = frames
+        frames.removeAll()
+        let config = currentConfig
+
+        Task {
+            await stopStream()
+            guard !capturedFrames.isEmpty else {
+                AppLogger.shared.log("[GIF] No frames captured")
+                return
             }
-            self.stream = nil
+            AppLogger.shared.log("[GIF] Encoding \(capturedFrames.count) frames...")
+            let gifURL = await Task.detached(priority: .userInitiated) {
+                GifRecorder.encodeGif(frames: capturedFrames)
+            }.value
+            guard let gifURL else {
+                AppLogger.shared.log("[GIF] Encoding failed")
+                return
+            }
+            AppLogger.shared.log("[GIF] ✓ Encoded: \(gifURL.lastPathComponent)")
+            if let config {
+                do {
+                    _ = try await UploadManager.shared.upload(imageURL: gifURL, config: config)
+                } catch {
+                    AppLogger.shared.log("[GIF] Upload failed: \(error)")
+                }
+            }
+            try? FileManager.default.removeItem(at: gifURL)
         }
+    }
 
-        guard !frames.isEmpty else {
-            print("[GIF] No frames captured")
-            return nil
-        }
+    // MARK: - Stream
 
-        print("[GIF] Encoding \(frames.count) frames to GIF")
-        return encodeGif(frames: frames)
+    private func stopStream() async {
+        guard let stream else { return }
+        do { try await stream.stopCapture() } catch { }
+        self.stream = nil
     }
 
     private func setupAndStartStream(rect: CGRect) async throws {
-        let availableContent = try await SCShareableContent.current
-
-        guard let display = availableContent.displays.first(where: { screen in
-            screen.frame.contains(CGPoint(x: rect.midX, y: rect.midY))
-        }) ?? availableContent.displays.first else {
+        let content = try await SCShareableContent.current
+        guard let display = content.displays.first(where: { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) })
+                ?? content.displays.first else {
             throw NSError(domain: "GIF", code: -1, userInfo: [NSLocalizedDescriptionKey: "No display found"])
         }
 
         let filter = SCContentFilter(display: display, excludingWindows: [])
+        let cfg = SCStreamConfiguration()
+        cfg.sourceRect = rect
+        cfg.width = Int(rect.width)
+        cfg.height = Int(rect.height)
+        cfg.captureResolution = .automatic
+        cfg.minimumFrameInterval = CMTime(value: 1, timescale: 10) // 10 fps
 
-        let config = SCStreamConfiguration()
-        config.sourceRect = rect
-        config.width = Int(rect.width)
-        config.height = Int(rect.height)
-        config.captureResolution = .automatic
-
-        let stream = SCStream(filter: filter, configuration: config, delegate: self)
-
-        // Add stream output
-        try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: DispatchQueue.main)
-
-        self.stream = stream
-        print("[GIF] Recording started")
+        let newStream = SCStream(filter: filter, configuration: cfg, delegate: self)
+        try newStream.addStreamOutput(self, type: .screen, sampleHandlerQueue: .main)
+        try await newStream.startCapture()
+        self.stream = newStream
+        AppLogger.shared.log("[GIF] Stream started at 10 fps")
     }
 
-    private func encodeGif(frames: [CGImage]) -> URL? {
-        let tempURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("recording_\(UUID().uuidString).gif")
+    // MARK: - Encoding
 
-        guard let destination = CGImageDestinationCreateWithURL(tempURL as CFURL, UTType.gif.identifier as CFString, frames.count, nil) else {
-            print("[GIF] Failed to create image destination")
+    nonisolated static func encodeGif(frames: [CGImage]) -> URL? {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("recording_\(UUID().uuidString).gif")
+        guard let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.gif.identifier as CFString, frames.count, nil) else {
             return nil
         }
-
-        let frameDelay: CGFloat = 0.1
-
-        for (index, frame) in frames.enumerated() {
-            let frameProperties: [String: Any] = [
-                kCGImagePropertyGIFDictionary as String: [
-                    kCGImagePropertyGIFDelayTime as String: frameDelay
-                ]
-            ]
-
-            CGImageDestinationAddImage(destination, frame, frameProperties as CFDictionary)
-
-            if index % 10 == 0 {
-                print("[GIF] Encoded frame \(index + 1)/\(frames.count)")
-            }
-        }
-
-        let gifProperties: [String: Any] = [
-            kCGImagePropertyGIFDictionary as String: [
-                kCGImagePropertyGIFLoopCount as String: 0
-            ]
+        let frameProps: [String: Any] = [
+            kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFDelayTime as String: 0.1]
         ]
-
-        CGImageDestinationSetProperties(destination, gifProperties as CFDictionary)
-
-        guard CGImageDestinationFinalize(destination) else {
-            print("[GIF] Failed to finalize GIF")
-            return nil
+        for frame in frames {
+            CGImageDestinationAddImage(dest, frame, frameProps as CFDictionary)
         }
-
-        print("[GIF] ✓ GIF created: \(tempURL.path)")
-        return tempURL
+        CGImageDestinationSetProperties(dest, [
+            kCGImagePropertyGIFDictionary as String: [kCGImagePropertyGIFLoopCount as String: 0]
+        ] as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return url
     }
 
-    private func showRecordingHUD() {
-        let frame = NSRect(x: 100, y: 100, width: 200, height: 60)
-        let panel = NSPanel(contentRect: frame, styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
-        panel.level = NSWindow.Level.screenSaver
-        panel.backgroundColor = NSColor.black.withAlphaComponent(0.8)
-        panel.isOpaque = false
-        panel.hasShadow = false
+    // MARK: - Overlay
 
-        let contentView = NSView(frame: frame)
-        contentView.wantsLayer = true
+    private func showRecordingOverlay(rect: CGRect) {
+        guard let screen = NSScreen.main else { return }
 
-        let label = NSTextField(labelWithString: "Recording GIF…")
-        label.textColor = .white
-        label.font = NSFont.systemFont(ofSize: 14)
-        label.frame = NSRect(x: 10, y: 35, width: 180, height: 20)
-        contentView.addSubview(label)
+        // CG coordinates (top-left origin) → NS screen coordinates (bottom-left origin)
+        let nsRect = NSRect(
+            x: rect.origin.x,
+            y: screen.frame.height - rect.origin.y - rect.height,
+            width: rect.width,
+            height: rect.height
+        )
 
-        let stopButton = NSButton(frame: NSRect(x: 10, y: 5, width: 180, height: 25))
-        stopButton.title = "Stop"
-        stopButton.target = self
-        stopButton.action = #selector(stopButtonClicked)
-        contentView.addSubview(stopButton)
+        // Full-screen border panel — ignores mouse so the user can still interact with recorded content
+        let bp = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        bp.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.screenSaverWindow)))
+        bp.backgroundColor = .clear
+        bp.isOpaque = false
+        bp.hasShadow = false
+        bp.ignoresMouseEvents = true
+        bp.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        // View-local rect: the panel covers the whole screen, so subtract screen origin
+        let viewRect = NSRect(
+            x: nsRect.minX - screen.frame.minX,
+            y: nsRect.minY - screen.frame.minY,
+            width: nsRect.width,
+            height: nsRect.height
+        )
+        bp.contentView = RecordingBorderView(frame: screen.frame, recordingRect: viewRect)
+        bp.orderFront(nil)
+        borderPanel = bp
 
-        panel.contentView = contentView
-        panel.makeKeyAndOrderFront(nil)
-        recordingWindow = panel
+        // Controls panel — positioned below the recording rect (or above if near bottom)
+        let cw: CGFloat = 224, ch: CGFloat = 46
+        let cx = nsRect.midX - cw / 2
+        let cy = nsRect.minY > ch + 16 ? nsRect.minY - ch - 8 : nsRect.maxY + 8
+        let cp = NSPanel(
+            contentRect: NSRect(x: cx, y: cy, width: cw, height: ch),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        cp.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.screenSaverWindow)))
+        cp.backgroundColor = .clear
+        cp.isOpaque = false
+        cp.hasShadow = true
+        cp.ignoresMouseEvents = false
+        cp.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        let cv = RecordingControlsView(frame: NSRect(origin: .zero, size: NSSize(width: cw, height: ch)))
+        cv.onPause = { [weak self] in self?.pauseRecording() }
+        cv.onResume = { [weak self] in self?.resumeRecording() }
+        cv.onCancel = { [weak self] in self?.cancelRecording() }
+        cv.onDone = { [weak self] in self?.finishRecording() }
+        cp.contentView = cv
+        cp.orderFront(nil)
+        controlsPanel = cp
     }
 
-    private func hideRecordingHUD() {
-        recordingWindow?.orderOut(nil)
-        recordingWindow = nil
-    }
-
-    @objc private func stopButtonClicked() {
-        Task {
-            if let gifURL = await stopRecording() {
-                let config = AppConfig()
-                do {
-                    _ = try await UploadManager.shared.upload(imageURL: gifURL, config: config)
-                } catch {
-                    print("[GIF] Upload failed: \(error)")
-                }
-                try? FileManager.default.removeItem(at: gifURL)
-            }
-        }
+    private func hideRecordingOverlay() {
+        borderPanel?.orderOut(nil)
+        borderPanel = nil
+        controlsPanel?.orderOut(nil)
+        controlsPanel = nil
     }
 }
 
+// MARK: - SCStream callbacks
+
 extension GifRecorder {
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
-        guard isRecording else { return }
-
+        guard isRecording, !isPaused, outputType == .screen else { return }
         if let image = sampleBuffer.cgImage {
             frames.append(image)
         }
     }
 }
 
+// MARK: - CMSampleBuffer → CGImage
+
 extension CMSampleBuffer {
     var cgImage: CGImage? {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(self) else { return nil }
         let ciImage = CIImage(cvImageBuffer: pixelBuffer)
-        let context = CIContext()
-        return context.createCGImage(ciImage, from: ciImage.extent)
+        return CIContext().createCGImage(ciImage, from: ciImage.extent)
     }
+}
+
+// MARK: - Animated recording border
+
+class RecordingBorderView: NSView {
+    private let recordingRect: NSRect
+    private var dashPhase: CGFloat = 0
+    private var animTimer: Timer?
+
+    init(frame: NSRect, recordingRect: NSRect) {
+        self.recordingRect = recordingRect
+        super.init(frame: frame)
+        animTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            self?.dashPhase -= 2
+            self?.needsDisplay = true
+        }
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    deinit { animTimer?.invalidate() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let ctx = NSGraphicsContext.current?.cgContext, !recordingRect.isEmpty else { return }
+        ctx.setLineDash(phase: dashPhase, lengths: [8, 4])
+        ctx.setStrokeColor(NSColor.red.withAlphaComponent(0.9).cgColor)
+        ctx.setLineWidth(2.5)
+        ctx.stroke(recordingRect.insetBy(dx: 1.25, dy: 1.25))
+    }
+}
+
+// MARK: - Controls HUD
+
+class RecordingControlsView: NSView {
+    var onPause: (() -> Void)?
+    var onResume: (() -> Void)?
+    var onCancel: (() -> Void)?
+    var onDone: (() -> Void)?
+
+    private let pauseBtn = NSButton()
+    private var paused = false
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        setupView()
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func setupView() {
+        wantsLayer = true
+        layer?.backgroundColor = NSColor(white: 0.1, alpha: 0.88).cgColor
+        layer?.cornerRadius = frame.height / 2
+        layer?.masksToBounds = true
+
+        // Pause / resume
+        pauseBtn.image = NSImage(systemSymbolName: "pause.fill", accessibilityDescription: "Pause")
+        pauseBtn.isBordered = false
+        pauseBtn.contentTintColor = .white
+        pauseBtn.target = self
+        pauseBtn.action = #selector(pauseTapped)
+
+        // Cancel (xmark)
+        let cancelBtn = NSButton()
+        cancelBtn.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Cancel")
+        cancelBtn.isBordered = false
+        cancelBtn.contentTintColor = NSColor(white: 0.55, alpha: 1)
+        cancelBtn.target = self
+        cancelBtn.action = #selector(cancelTapped)
+
+        // Done
+        let doneBtn = NSButton(title: "Done", target: self, action: #selector(doneTapped))
+        doneBtn.isBordered = false
+        doneBtn.wantsLayer = true
+        doneBtn.layer?.backgroundColor = NSColor.systemBlue.cgColor
+        doneBtn.layer?.cornerRadius = 6
+        doneBtn.contentTintColor = .white
+        doneBtn.font = NSFont.systemFont(ofSize: 13, weight: .medium)
+
+        let btnSz: CGFloat = 26
+        let doneW: CGFloat = 58
+        let gap: CGFloat = 12
+        let totalW = btnSz + gap + btnSz + gap + doneW
+        let x0 = (frame.width - totalW) / 2
+        let midY = frame.height / 2
+
+        pauseBtn.frame = NSRect(x: x0, y: midY - btnSz / 2, width: btnSz, height: btnSz)
+        cancelBtn.frame = NSRect(x: x0 + btnSz + gap, y: midY - btnSz / 2, width: btnSz, height: btnSz)
+        doneBtn.frame = NSRect(x: x0 + 2 * (btnSz + gap), y: midY - 13, width: doneW, height: 26)
+
+        addSubview(pauseBtn)
+        addSubview(cancelBtn)
+        addSubview(doneBtn)
+    }
+
+    func setIsPaused(_ isPaused: Bool) {
+        paused = isPaused
+        pauseBtn.image = NSImage(systemSymbolName: isPaused ? "play.fill" : "pause.fill", accessibilityDescription: nil)
+    }
+
+    @objc private func pauseTapped() { paused ? onResume?() : onPause?() }
+    @objc private func cancelTapped() { onCancel?() }
+    @objc private func doneTapped() { onDone?() }
 }
