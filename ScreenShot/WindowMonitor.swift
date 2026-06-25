@@ -12,7 +12,7 @@ class WindowMonitor {
     private var appActivationObserver: NSObjectProtocol?
 
     func getCurrentWindowTitle() -> String {
-        return currentWindowTitle
+        return currentWindowTitle == "Jyazo" ? "" : currentWindowTitle
     }
 
     func requestAllPermissions() {

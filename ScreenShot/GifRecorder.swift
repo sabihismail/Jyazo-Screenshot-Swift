@@ -94,7 +94,10 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
             AppLogger.shared.log("[GIF] ✓ Encoded: \(gifURL.lastPathComponent)")
             if let config {
                 do {
-                    _ = try await UploadManager.shared.upload(imageURL: gifURL, config: config)
+                    let resultURL = try await UploadManager.shared.upload(imageURL: gifURL, config: config)
+                    if !resultURL.isEmpty, let url = URL(string: resultURL) {
+                        await MainActor.run { NSWorkspace.shared.open(url) }
+                    }
                 } catch {
                     AppLogger.shared.log("[GIF] Upload failed: \(error)")
                 }
@@ -118,7 +121,11 @@ class GifRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
             throw NSError(domain: "GIF", code: -1, userInfo: [NSLocalizedDescriptionKey: "No display found"])
         }
 
-        let filter = SCContentFilter(display: display, excludingWindows: [])
+        // Exclude our overlay panels so the border and controls never appear in captured frames
+        let overlayIDs = Set([borderPanel?.windowNumber, controlsPanel?.windowNumber]
+            .compactMap { $0 }.map { CGWindowID($0) })
+        let excludedWindows = content.windows.filter { overlayIDs.contains($0.windowID) }
+        let filter = SCContentFilter(display: display, excludingWindows: excludedWindows)
         let cfg = SCStreamConfiguration()
         cfg.sourceRect = rect
         cfg.width = Int(rect.width)
